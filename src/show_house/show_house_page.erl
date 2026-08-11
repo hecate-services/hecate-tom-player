@@ -292,8 +292,7 @@ helm(Names) ->
 %% to a player has failed whatever the rest of the tests say.
 -spec say(term()) -> binary().
 say({ship_is_not_alongside, Standing}) ->
-    <<"She is not lying at a port. She is ",
-      (atom_to_binary(Standing, utf8))/binary, ".">>;
+    <<"She is not lying at a port. ", (where_she_is(Standing))/binary>>;
 say({not_enough_coin, Coin}) ->
     <<"That would cost ", (iolist_to_binary(money(Coin)))/binary,
       " and the purse will not stretch that far.">>;
@@ -352,6 +351,17 @@ say(timeout) ->
     <<"Nobody answered in time.">>;
 say(Other) ->
     iolist_to_binary(io_lib:format("~0p", [Other])).
+
+%% Everything else in this game is written in careful English, and this one
+%% clause used to print the standing atom straight into a sentence: "She is
+%% was_lost." A player should never be shown the inside of the machine.
+where_she_is(consigned)      -> <<"She is consigned and waiting for the sea.">>;
+where_she_is(in_passage)     -> <<"She is at sea.">>;
+where_she_is(made_landfall)  -> <<"She has made landfall and is not yet "
+                                  "alongside.">>;
+where_she_is(was_lost)       -> <<"She is lost.">>;
+where_she_is(never_sailed)   -> <<"She has never sailed.">>;
+where_she_is(_Not_yet_known) -> <<"Where she is is not known just now.">>.
 
 %%% Formatting
 

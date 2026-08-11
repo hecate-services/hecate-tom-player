@@ -71,8 +71,14 @@ quoted({ok, Quote}) ->
 quoted(Answer) ->
     stumbled(Answer).
 
+%% WHAT WAS ASKED FOR IS NOT WHAT MOVED, and a quay holds what it holds, so an
+%% order for five tons at a shallow port fills two and a half. The confirmation
+%% used to say "Sold it, for 209.38" and leave the player to notice from the
+%% orders table that only 2.545 tons had left the hold. The number a player reads
+%% first must be the true one.
 traded(Verb, {ok, Receipt}) ->
-    {true, iolist_to_binary([Verb, <<" it, for ">>,
+    {true, iolist_to_binary([Verb, <<" ">>, show_house_page:quantity(moved(Receipt)),
+                             <<" for ">>,
                              show_house_page:money(maps:get(<<"coin">>, Receipt,
                                                             undefined)),
                              <<".">>])};
@@ -89,6 +95,13 @@ stumbled({refused, Why}) ->
 stumbled({pending, Why}) ->
     {false, <<"No answer yet, so the house will keep asking. (",
               (show_house_page:say(Why))/binary, ")">>}.
+
+%% A buy says how much it filled and a sell how much it discharged. Whichever
+%% word the far port used, it is the number of tons that actually left or entered
+%% the hold, and it is the one a player must be shown first.
+moved(#{<<"filled">> := Tons})     -> Tons;
+moved(#{<<"discharged">> := Tons}) -> Tons;
+moved(_Receipt_without_one)        -> undefined.
 
 field(Name, Fields) -> proplists:get_value(Name, Fields, <<>>).
 

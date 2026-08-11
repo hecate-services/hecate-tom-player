@@ -24,7 +24,8 @@
 
 -export([start_link/1]).
 -export([names/0, house/0, snapshot/0, mint_order/0]).
--export([record/1, sight/1, note_quotes/2, note_news/2, note_trouble/2]).
+-export([record/1, sight/1, note_quotes/2, note_news/2]).
+-export([note_trouble/2, note_all_well/1]).
 -export([watch/1]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2]).
 
@@ -94,6 +95,13 @@ note_news(Fact, Payload) -> gen_server:cast(?MODULE, {news, Fact, Payload}).
 -spec note_trouble(atom(), term()) -> ok.
 note_trouble(Where, Reason) -> gen_server:cast(?MODULE, {trouble, Where, Reason}).
 
+%% @doc That job came right. Forget whatever it last complained about.
+%%
+%% The partner of note_trouble/2. A job that can say it went wrong and has no way
+%% to say it came right leaves its complaint on the page for ever.
+-spec note_all_well(atom()) -> ok.
+note_all_well(Where) -> gen_server:cast(?MODULE, {all_well, Where}).
+
 %% @doc Follow the house. The caller receives `{house_changed, Snapshot}' on
 %% every change until it dies.
 -spec watch(pid()) -> ok.
@@ -141,6 +149,17 @@ handle_cast({news, Fact, Payload}, #state{news = News} = S) ->
 handle_cast({trouble, Where, Reason}, #state{trouble = T} = S) ->
     Item = #{reason => Reason, at => erlang:system_time(millisecond)},
     {noreply, told(S#state{trouble = T#{Where => Item}})};
+
+%% THE PANEL SHOWS WHAT IS WRONG NOW, NOT WHAT HAS EVER BEEN WRONG. A note used
+%% to be written and never removed, so ten seconds of trouble at boot sat at the
+%% top of the page in red for the rest of the session while the same panel said
+%% the markets had answered a second ago. A page that cries wolf teaches a player
+%% to ignore the one place that would warn them about something real.
+%%
+%% Cleared on success rather than on a timer, because a job that keeps failing
+%% must keep showing.
+handle_cast({all_well, Where}, #state{trouble = T} = S) ->
+    {noreply, told(S#state{trouble = maps:remove(Where, T)})};
 
 handle_cast(_Other, S) ->
     {noreply, S}.

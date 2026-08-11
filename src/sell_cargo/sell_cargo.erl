@@ -55,6 +55,7 @@ alongside(#{standing := Standing}, _Good, _Quantity) ->
     {refused, {ship_is_not_alongside, Standing}}.
 
 concluded({ok, Receipt}, Order) ->
+    ok = keep_house:note_all_well(sell_cargo),
     banked(number_at(<<"coin">>, Receipt), Receipt, Order);
 concluded({refused, Why}, #{order := Key}) ->
     ok = keep_house:record({sale_refused_v1,

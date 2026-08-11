@@ -86,6 +86,27 @@ markup_from_the_mesh_cannot_reach_the_page_test() ->
     ?assertNot(contains(Board, <<"<script>alert">>)),
     ?assert(contains(Board, <<"&lt;script&gt;">>)).
 
+%% Fault 2. A note used to be written and never removed, so ten seconds of
+%% trouble at boot sat in red at the top of the page for the rest of the session
+%% while the same panel said the markets had answered a second ago. A page that
+%% cries wolf teaches a player to ignore the one place that would warn them about
+%% something real.
+%%
+%% Cleared on success rather than on a timer, because a job that keeps failing
+%% must keep showing.
+a_note_clears_when_that_job_comes_right_test() ->
+    Sad = #{read_quotes => #{reason => {?LISBON, timeout}, at => 1786528800000},
+            find_ship   => #{reason => no_healthy_station, at => 1786528800000}},
+    ?assert(contains(flat(show_house_page:board((moored_view())#{trouble => Sad})),
+                     <<"Not everything answered">>)),
+    Better = maps:remove(find_ship, Sad),
+    Board = flat(show_house_page:board((moored_view())#{trouble => Better})),
+    ?assertNot(contains(Board, <<"find_ship">>)),
+    ?assert(contains(Board, <<"read_quotes">>)),
+    %% And when the last one comes right the panel is gone altogether.
+    ?assertNot(contains(flat(show_house_page:board((moored_view())#{trouble => #{}})),
+                        <<"Not everything answered">>)).
+
 a_port_that_will_not_answer_is_said_out_loud_test() ->
     View = (moored_view())#{trouble => #{read_quotes => #{reason => {?LISBON, timeout},
                                                           at => 1786528800000}}},
@@ -166,6 +187,17 @@ a_refusal_with_no_reason_on_it_names_the_older_side_test() ->
     Said = show_house_page:say({call_error, 16#0F, unknown_error}),
     ?assert(contains(Said, <<"said no">>)),
     ?assert(contains(Said, <<"older mesh">>)).
+
+%% Fault 4. The standing atom used to be printed straight into a sentence, so a
+%% player whose ship had sunk was told "She is was_lost." Everything else in this
+%% game is written in careful English.
+no_machine_words_reach_the_player_test() ->
+    [begin
+         Said = show_house_page:say({ship_is_not_alongside, Standing}),
+         ?assertNot(contains(Said, atom_to_binary(Standing, utf8)))
+     end || Standing <- [in_passage, made_landfall, was_lost, never_sailed]],
+    ?assert(contains(show_house_page:say({ship_is_not_alongside, was_lost}),
+                     <<"She is lost">>)).
 
 anything_unexpected_is_still_shown_test() ->
     ?assert(contains(show_house_page:say({something, new, 42}), <<"something">>)).

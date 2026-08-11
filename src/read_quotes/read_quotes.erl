@@ -67,10 +67,11 @@ one_port(Harbour, Goods) ->
            Harbour).
 
 posted({ok, Reply}, Harbour) ->
-    keep_house:note_quotes(Harbour,
-                           #{quotes  => maps:get(<<"quotes">>, Reply, []),
-                             told_at => maps:get(<<"at">>, Reply, undefined),
-                             seen_at => erlang:system_time(millisecond)});
+    ok = keep_house:note_quotes(Harbour,
+                                #{quotes  => maps:get(<<"quotes">>, Reply, []),
+                                  told_at => maps:get(<<"at">>, Reply, undefined),
+                                  seen_at => erlang:system_time(millisecond)}),
+    keep_house:note_all_well(read_quotes);
 posted({refused, Why}, Harbour) ->
     keep_house:note_trouble(read_quotes, {Harbour, Why});
 posted({unreachable, Why}, Harbour) ->

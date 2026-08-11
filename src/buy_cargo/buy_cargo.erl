@@ -117,6 +117,7 @@ solvent(true, _Coin, Harbour, Good, Quantity) ->
              quantity => float(Quantity), at => At, state => ordered}).
 
 concluded({ok, Receipt}, Order) ->
+    ok = keep_house:note_all_well(buy_cargo),
     banked(number_at(<<"coin">>, Receipt), Receipt, Order);
 concluded({refused, Why}, #{order := Key}) ->
     ok = keep_house:record({purchase_refused_v1,

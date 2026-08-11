@@ -59,6 +59,7 @@ consigned({ok, Reply}, Harbour, BoundFor) ->
     ok = keep_house:note_news(you_sailed, #{from      => Harbour,
                                             bound_for => BoundFor}),
     ok = find_ship:look(),
+    ok = keep_house:note_all_well(sail_ship),
     {ok, Reply};
 consigned({refused, Why}, _Harbour, _BoundFor) ->
     {refused, Why};

@@ -91,7 +91,8 @@ armed(After, #{timer := Timer} = S) ->
 cancelled(undefined) -> ok;
 cancelled(Timer)     -> erlang:cancel_timer(Timer).
 
-acted({sight, Sight})   -> keep_house:sight(Sight);
+acted({sight, Sight})   -> ok = keep_house:sight(Sight),
+                           keep_house:note_all_well(find_ship);
 acted({no_news, Why})   -> keep_house:note_trouble(find_ship, Why).
 
 ship_of(Names) -> #{<<"ship">> => maps:get(ship, Names)}.
