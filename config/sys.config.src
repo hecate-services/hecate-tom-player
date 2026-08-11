@@ -1,0 +1,59 @@
+%% -*- mode: erlang -*-
+%% Substituted by relx at boot. Every ${VAR} must resolve or the node refuses to
+%% start on a malformed term, which is the correct failure: a house with half a
+%% realm reaches nobody while looking perfectly healthy.
+[
+    {hecate_om, [
+        {service_cert_path, "/etc/hecate/secrets/service-cert.pem"},
+        {station_socket,    "/run/macula/station.sock"},
+        {health_port,       ${TOM_HEALTH_PORT}},
+        {capability_topic,  <<"_mesh.cap.">>},
+
+        %% THE REALM TAG. Thirty-two bytes, or sixty-four hex characters. This is
+        %% the second argument to every macula:call and macula:publish, and it is
+        %% NOT the realm name that goes inside MRIs and topics. Both are called
+        %% "the realm" and confusing them is the fastest way to a service that
+        %% answers /health and reaches nobody.
+        {realm,             <<"${TOM_REALM_TAG}">>},
+
+        %% Stations this house dials out to, comma separated. Overridden by the
+        %% MACULA_STATION_SEEDS environment variable when that is set.
+        {station_seeds,     [<<"${TOM_STATION_SEED}">>]}
+    ]},
+
+    {hecate_tom_house, [
+        %% THE REALM NAME. Goes inside every MRI and every topic. All three
+        %% services in a game must agree on this exactly.
+        {realm_name,         <<"${TOM_REALM_NAME}">>},
+
+        %% Who is playing, and which hull.
+        {player,             <<"${TOM_PLAYER}">>},
+        {ship,               <<"${TOM_SHIP}">>},
+
+        %% The ports, by their local names, comma separated. Their MRIs are
+        %% derived from the realm name and these, by the same rule the harbours
+        %% use on their own names, so two hand-written identifiers cannot drift
+        %% apart. A comma-separated binary is used rather than a list because
+        %% this file is a template and a template cannot write a list of
+        %% variable length.
+        {harbours,           <<"${TOM_HARBOURS}">>},
+
+        %% What the page shows a price for, comma separated. Naming them keeps
+        %% `list_quotes' from answering with every good the port trades, which
+        %% is sixty-seven rows for a page that wants eight.
+        {goods,              <<"${TOM_GOODS}">>},
+
+        %% The purse at genesis. Applied ONCE, and only into a ledger that has no
+        %% record of this house ever having opened.
+        {purse,              ${TOM_PURSE}},
+
+        %% Where the house keeps what it must not forget.
+        {ledger,             "${TOM_LEDGER}"},
+
+        {web_port,           ${TOM_WEB_PORT}},
+        {quote_interval_ms,  ${TOM_QUOTE_INTERVAL_MS}},
+        {locate_interval_ms, ${TOM_LOCATE_INTERVAL_MS}}
+    ]},
+
+    {kernel, [{logger_level, info}]}
+].

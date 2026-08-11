@@ -1,0 +1,55 @@
+name: lint and test
+
+# Documentation is not code. A push that touches only prose should not spend
+# fifteen minutes building a Rust QUIC NIF to prove that a paragraph compiles.
+on:
+  push:
+    paths-ignore:
+      - '**.md'
+      - 'LICENSE'
+  pull_request:
+    paths-ignore:
+      - '**.md'
+      - 'LICENSE'
+
+# ⚠ NO IMAGE BUILD LIVES IN THIS FILE, deliberately. On this fleet a push to a
+# default branch that rebuilds `:latest' rolls every box watching it, and that
+# has already happened once for a commit touching two markdown files. If an image
+# build is wanted it belongs in its own workflow, with its own path filter, and
+# with somebody having decided that a roll is what a push should mean.
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # ⚠ PINNED IN TWO PLACES AND THEY MUST AGREE: here and the Containerfile.
+      # A service that builds on one release and tests on another only ever
+      # proves that the tests pass on the CI release.
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: '28'
+          rebar3-version: '3.25'
+
+      # macula ships a QUIC NIF built from source here, for the same reason the
+      # Containerfile forces it: a fetched binary is linked against a libc that
+      # is not necessarily this one.
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: compile
+        run: rebar3 compile
+
+      - name: eunit
+        run: rebar3 eunit
+
+      - name: lint
+        run: rebar3 lint
+
+      - name: dialyzer
+        run: rebar3 dialyzer
+
+      # Every other check here runs against a function. This one boots the
+      # service, binds two ports and asks them questions over TCP.
+      - name: smoke
+        run: scripts/smoke.sh

@@ -1,0 +1,19 @@
+_build/
+_checkouts/
+.rebar3/
+rebar.lock
+erl_crash.dump
+rebar3.crashdump
+
+.idea/
+*.swp
+.DS_Store
+
+# ex_doc / edoc generated output
+/doc/
+
+# a house's own ledger, when one is run from the checkout
+/run/
+
+%% runtime state written by scripts/play-the-loop.sh
+_loop/

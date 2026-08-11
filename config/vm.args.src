@@ -1,0 +1,9 @@
+-sname hecate_tom_house
+-setcookie ${TOM_COOKIE}
+
++K true
++A 8
+
+## The house holds one purse and one page. It does not need a big scheduler
+## budget and it should not take one on a laptop that is also running a port.
++S 2:2

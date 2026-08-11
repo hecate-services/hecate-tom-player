@@ -1,0 +1,66 @@
+{application, hecate_tom_house, [
+    {description, "TOM, Traders of Macao: the player's house, purse and ship"},
+    {vsn, "0.1.0"},
+    {registered, [hecate_tom_house_sup, keep_house, watch_ports, read_quotes,
+                  find_ship, settle_orders]},
+    {mod, {hecate_tom_house_app, []}},
+    {applications, [
+        kernel,
+        stdlib,
+        cowboy,
+        macula,
+        hecate_om
+    ]},
+    {env, [
+        %% The realm NAME. This is the binary that goes inside every MRI and
+        %% every topic, and it is NOT the 32-byte realm tag that goes as the
+        %% second argument to macula:publish/call. That one lives in the
+        %% hecate_om section as `realm'. Two different things, both called the
+        %% realm, and confusing them is the fastest way to a service that looks
+        %% healthy and reaches nobody.
+        {realm_name, <<"io.macula">>},
+
+        %% Who is playing. The house instance MRI is derived:
+        %%   mri:instance:{realm_name}/tom/house/{player}
+        {player, <<"raf">>},
+
+        %% The one hull. mri:instance:{realm_name}/tom/ship/{ship}
+        {ship, <<"santa_clara">>},
+
+        %% The ports this house trades at, by local name. Their instance MRIs
+        %% are derived the same way the harbours derive their own, so a name
+        %% here and a name there cannot disagree about what the MRI is.
+        {harbours, [<<"macao">>, <<"lisbon">>]},
+
+        %% What the page shows a price for. Naming them is deliberate: an empty
+        %% list asks a port for every good it trades, which is sixty-seven rows
+        %% for a page that wants eight.
+        {goods, [<<"pepper">>, <<"nutmeg">>, <<"raw_silk">>, <<"porcelain">>]},
+
+        %% The purse at genesis. Applied ONCE, and only when this house's ledger
+        %% has no record of ever having been opened. A house that re-seeded its
+        %% purse on every boot would mint money by crashing.
+        {purse, 1000.0},
+
+        %% The house's own durable log. Everything it must not forget is here:
+        %% the purse, every order and its settlement, and the last picture it
+        %% had of its ship.
+        {ledger, "/var/lib/hecate-tom-house/house.log"},
+
+        %% The page.
+        {web_port, 8461},
+
+        %% How often the house asks both ports what things cost.
+        {quote_interval_ms, 5000},
+
+        %% How often the house asks the ocean and the ports where its ship is.
+        %% This is the poll that makes the house independent of ever having
+        %% received a fact, which is what lets it be shut down for a voyage.
+        {locate_interval_ms, 10000}
+    ]},
+    {modules, []},
+    {licenses, ["Apache-2.0"]},
+    {links, [
+        {"GitHub", "https://github.com/hecate-services/hecate-tom-house"}
+    ]}
+]}.
