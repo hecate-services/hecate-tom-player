@@ -134,6 +134,28 @@ a_sighting_without_a_hull_keeps_the_hold_test() ->
                  tom_house:sight(H)),
     ?assertEqual(#{?PEPPER => 40.0}, tom_house:cargo(H)).
 
+%% A ship on the bottom has no hold. The was_lost sight carries no hull key, so
+%% before the aggregate enforced this the old hull survived the default in
+%% sighted/2, was written to the ledger and replayed for ever, and the player was
+%% left looking at a manifest for cargo on the sea floor.
+a_wreck_takes_her_cargo_down_with_her_test() ->
+    H = tom_house:replay([opened(1000.0),
+                          sighted(moored, ?MACAO, hull(6, #{?PEPPER => 40.0})),
+                          {ship_sighted_v1, #{standing => was_lost,
+                                              bound_for => ?LISBON,
+                                              cause => storm, at => 20}}],
+                         tom_house:empty()),
+    ?assertMatch(#{standing := was_lost, cause := storm}, tom_house:sight(H)),
+    ?assertEqual(#{}, tom_house:cargo(H)).
+
+%% And it survives a replay, because the ledger is what the house wakes up to.
+a_wreck_stays_empty_across_a_replay_test() ->
+    Facts = [opened(1000.0),
+             sighted(moored, ?MACAO, hull(6, #{?PEPPER => 40.0})),
+             {ship_sighted_v1, #{standing => was_lost, bound_for => ?LISBON,
+                                 cause => storm, at => 20}}],
+    ?assertEqual(#{}, tom_house:cargo(tom_house:replay(Facts, tom_house:empty()))).
+
 an_unknown_fact_changes_nothing_test() ->
     H0 = tom_house:replay([opened(1000.0)], tom_house:empty()),
     ?assertEqual(H0, tom_house:apply_fact({some_fact_from_the_future_v9, #{}}, H0)).

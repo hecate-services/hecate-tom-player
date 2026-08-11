@@ -237,10 +237,24 @@ behind(_New, _Old)                                     -> false.
 hop_of(Hull) when is_map(Hull) -> maps:get(<<"hop">>, Hull, undefined);
 hop_of(_)                      -> undefined.
 
+%% A sight that does not mention the hull leaves it alone, which is right for a
+%% ship at sea: the ocean reports where she is, not what is stacked in her hold.
+%%
+%% It is wrong exactly once. A ship on the bottom has no hold, and whatever she
+%% was carrying went down with her, so a `was_lost' sight that forgot to say so
+%% used to leave the player looking at a manifest for cargo on the sea floor,
+%% written to the ledger and replayed for ever after.
+%%
+%% The rule lives here rather than in the sight because it is the house's to
+%% keep. A future sight can forget; an aggregate cannot.
+afloat(was_lost, _Hull) -> undefined;
+afloat(_Standing, Hull) -> Hull.
+
 sighted(false, _F, H) ->
     H;
 sighted(true, F, H) ->
-    H#{hull       => maps:get(hull, F, hull(H)),
+    H#{hull       => afloat(maps:get(standing, F),
+                            maps:get(hull, F, hull(H))),
        standing   => maps:get(standing, F),
        where      => maps:get(where, F, undefined),
        bound_for  => maps:get(bound_for, F, undefined),
