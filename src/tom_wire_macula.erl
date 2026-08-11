@@ -65,13 +65,18 @@ listening(Other)     -> {error, Other}.
 %% the far side managed to send is a refusal, because a house that carried on
 %% with a term it does not understand would be inventing a receipt.
 %%
-%% A REPLY CARRYING `refused' IS A NO, WITH ITS REASON INTACT. The reason binary
-%% in `{error, Binary}' does not survive the mesh: macula renders it into a
-%% BOLT#4 frame's `detail' and the SDK's caller path reads only the code, so
-%% every refusal in the game arrives here as one indistinguishable
-%% `{call_error, 15, unknown_error}'. The harbours therefore send a refusal as a
-%% successful reply with the reason in it, which is the one shape the wire keeps
-%% whole, and it is read here before the plain-map clause below.
+%% A REPLY CARRYING `refused' IS A NO, WITH ITS REASON INTACT. The harbours send
+%% a refusal as a successful reply with the reason in it, and it is read here
+%% before the plain-map clause below.
+%%
+%% That shape was originally a workaround: before macula 8.0.0 the reason binary
+%% in `{error, Binary}' did not survive the mesh, because the SDK rendered it
+%% into a BOLT#4 frame's `detail' and its caller path read only the code, so
+%% every refusal in the game arrived as one indistinguishable
+%% `{call_error, 15, unknown_error}'. Since 8.0.0 a refusal arrives whole as
+%% `{error, Binary}' and is classified as such below. The reply-carrying shape is
+%% kept anyway, because a refusal is an ordinary outcome rather than an error and
+%% reads better as one.
 -spec classify(term()) -> tom_wire:answer().
 classify({ok, #{<<"refused">> := Reason}}) ->
     {refused, Reason};
@@ -83,6 +88,13 @@ classify({ok, Other}) ->
     {refused, {unexpected_reply, Other}};
 classify({error, {call_error, Code, Name}}) ->
     verdict(Code, Name);
+%% Since macula 8.0.0 a handler's `{error, Reason}' arrives with the reason
+%% intact rather than as a code. It is a refusal and it is FINAL: re-asking a
+%% harbour that has just said `hold_full' is how a client spins. Without this
+%% clause the catch-all below would call it unreachable and the order would be
+%% retried until it timed out.
+classify({error, Reason}) when is_binary(Reason) ->
+    {refused, Reason};
 classify({error, Reason}) ->
     {unreachable, Reason};
 classify({'EXIT', Reason}) ->

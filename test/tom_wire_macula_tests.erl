@@ -76,6 +76,22 @@ an_error_tuple_in_a_result_is_final_test() ->
 
 %% Carrying on with a term the house does not understand would be inventing a
 %% receipt out of somebody else's mistake.
+%% Since macula 8.0.0 a handler refusal arrives whole rather than as a code, and
+%% it must be classified as a REFUSAL. Before this clause existed the catch-all
+%% called it unreachable, which means the house would have retried an order the
+%% harbour had already turned down, until it timed out.
+a_bare_binary_reason_is_a_refusal_not_a_failure_test() ->
+    ?assertEqual({refused, <<"hold_full">>},
+                 tom_wire_macula:classify({error, <<"hold_full">>})),
+    ?assertEqual({refused, <<"not_enough_coin">>},
+                 tom_wire_macula:classify({error, <<"not_enough_coin">>})).
+
+%% And an atom reason is still the transport, not a handler. Only a binary
+%% crosses the mesh as a reason.
+a_bare_atom_reason_is_still_unreachable_test() ->
+    ?assertEqual({unreachable, timeout},
+                 tom_wire_macula:classify({error, timeout})).
+
 a_reply_that_is_not_a_map_is_refused_test() ->
     ?assertMatch({refused, {unexpected_reply, <<"yes">>}},
                  tom_wire_macula:classify({ok, <<"yes">>})).

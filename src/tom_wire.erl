@@ -15,18 +15,21 @@
 %%
 %% == The taxonomy, as the mesh actually delivers it ==
 %%
-%% A handler on the far side that returns `{error, Reason}' does NOT arrive here
-%% as `{error, Reason}'. The SDK turns it into a BOLT#4 error frame with code
-%% 0x0F, and the caller sees `{error, {call_error, 16#0F, unknown_error}}'. The
-%% reason binary is carried in the frame's `detail' field and the client drops it
-%% on the floor. So the house can tell THAT it was refused and cannot tell WHY,
-%% which is a real hole in the frozen contract and is reported as one.
+%% A handler on the far side that returns `{error, Reason}' arrives here as
+%% `{error, Reason}', reason intact, and is refused and FINAL.
 %%
-%% The codes that matter, from `macula_station_link':
+%% That is true as of macula 8.0.0 and was not true before it. The SDK turned a
+%% refusal into a BOLT#4 error frame with code 0x0F, carried the reason in the
+%% frame's `detail' field, and then dropped `detail' on the caller path, so every
+%% refusal in the game arrived as `{error, {call_error, 16#0F, unknown_error}}'.
+%% The house could tell THAT it had been refused and never WHY. It was found
+%% building this service and fixed in the SDK rather than worked around again.
 %%
-%%   0x0F  the handler returned {error, _}          → refused, and final
-%%   0x02  the handler crashed                      → unreachable, retry
-%%   0x01  nothing is advertising that procedure    → unreachable, retry
+%% The codes still matter, for the frames a handler did not speak:
+%%
+%%   0x0F  a refusal from a peer too old to send `detail' → refused, and final
+%%   0x02  the handler crashed                           → unreachable, retry
+%%   0x01  nothing is advertising that procedure         → unreachable, retry
 %%   other → macula_bolt4:is_retryable/1 decides
 %%
 %% 0x0F is deliberately NOT delegated to `macula_bolt4:is_retryable/1', which

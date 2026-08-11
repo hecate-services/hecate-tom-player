@@ -158,13 +158,14 @@ each_reason_a_port_gives_is_said_in_english_test() ->
 a_reason_with_no_sentence_is_still_shown_test() ->
     ?assert(contains(show_house_page:say(<<"quarantine">>), <<"quarantine">>)).
 
-%% What is left of the old hole, said out loud rather than hidden. A refusal
-%% that still comes back as a bare error code carries no reason at all, and the
-%% page says so instead of inventing one.
-a_refusal_with_no_reason_on_it_is_admitted_test() ->
+%% The hole this used to describe is closed: since macula 8.0.0 a refusal
+%% carries its reason. A bare error code now means the far port is on an older
+%% mesh, and the page says which of the two is behind rather than blaming the
+%% mesh for a limit it no longer has.
+a_refusal_with_no_reason_on_it_names_the_older_side_test() ->
     Said = show_house_page:say({call_error, 16#0F, unknown_error}),
     ?assert(contains(Said, <<"said no">>)),
-    ?assert(contains(Said, <<"does not carry the reason">>)).
+    ?assert(contains(Said, <<"older mesh">>)).
 
 anything_unexpected_is_still_shown_test() ->
     ?assert(contains(show_house_page:say({something, new, 42}), <<"something">>)).

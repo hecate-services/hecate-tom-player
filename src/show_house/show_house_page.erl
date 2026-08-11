@@ -340,12 +340,12 @@ say(<<"bad_quantity">>) ->
     <<"That is not a number of tons.">>;
 say(Reason) when is_binary(Reason) ->
     <<"The port said no: ", Reason/binary, ".">>;
-%% Still reachable for anything that refuses with a bare error tuple rather than
-%% a reply: the SDK renders the reason into the frame's `detail' and its caller
-%% path reads only the code, so all this house learns is that the answer was no.
+%% Since macula 8.0.0 a refusal carries its reason, so this is now only reached
+%% when the far side is too old to send one. Left in because a port on an older
+%% SDK should still get a sentence rather than a tuple.
 say({call_error, 16#0F, _Name}) ->
-    <<"The port said no. It did not say why: this refusal came back as an "
-      "error code, and the mesh does not carry the reason behind one.">>;
+    <<"The port said no, and did not say why. That port is running an older "
+      "mesh than this house.">>;
 say({call_error, _Code, _Name}) ->
     <<"The port could not be reached just now.">>;
 say(timeout) ->
