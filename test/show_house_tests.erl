@@ -126,6 +126,36 @@ an_empty_house_still_renders_test() ->
     ?assert(contains(Page, <<"nobody asked yet">>)),
     ?assert(contains(Page, <<"Empty.">>)).
 
+%%% The cash book
+
+the_board_shows_the_cash_book_test() ->
+    Board = flat(show_house_page:board(moored_view())),
+    ?assert(contains(Board, <<"The cash book">>)),
+    ?assert(contains(Board, <<"The house opened">>)),
+    ?assert(contains(Board, <<"1000.00">>)),
+    ?assert(contains(Board, <<"Bought 40 of pepper at macao">>)).
+
+%% A column carries a number only when the money went that way. A purchase is
+%% money out, and the In column beside it is a dash rather than a zero, because a
+%% zero reads as a movement of nothing.
+a_purchase_shows_in_the_out_column_only_test() ->
+    Board = flat(show_house_page:board(moored_view())),
+    ?assert(contains(Board, <<"<td class=\"n empty\">&mdash;</td>"
+                              "<td class=\"n\">581.42</td>">>)).
+
+%% More movements than the window shows. It must open with what was brought
+%% forward, or a player reads a column that does not add up.
+a_book_longer_than_the_window_is_brought_forward_test() ->
+    Board = flat(show_house_page:board((moored_view())#{cash_book => long_book()})),
+    ?assert(contains(Board, <<"Brought forward">>)),
+    ?assertNot(contains(Board, <<"The house opened">>)).
+
+%% A view with no book in it at all is a page, not a crash.
+a_view_without_a_book_still_renders_test() ->
+    Board = flat(show_house_page:board(maps:remove(cash_book, moored_view()))),
+    ?assertNot(contains(Board, <<"The cash book">>)),
+    ?assert(contains(Board, <<"The market">>)).
+
 %%% Numbers a person reads
 
 money_is_always_two_places_test() ->
@@ -223,6 +253,15 @@ the_json_view_counts_down_against_its_own_instant_test() ->
     Json = show_house_json:snapshot(standing_view(in_passage)),
     ?assertEqual(90000, maps:get(<<"due_in_ms">>, maps:get(<<"ship_is">>, Json))).
 
+%% The page shows the last eight movements. A shell is where somebody goes to add
+%% the thing up themselves, so the endpoint carries all of them.
+the_json_view_carries_the_whole_book_test() ->
+    Json = show_house_json:snapshot((moored_view())#{cash_book => long_book()}),
+    Book = maps:get(<<"book">>, Json),
+    ?assertEqual(10000.0, maps:get(<<"opened_with">>, Book)),
+    ?assertEqual(10, length(maps:get(<<"entries">>, Book))),
+    ?assertEqual(9900.0, maps:get(<<"closing">>, Book)).
+
 %% An error reason is an Erlang term. Rendering it faithfully beats dropping it.
 the_json_view_spells_out_a_refusal_test() ->
     View = (moored_view())#{orders => [#{order => <<"a">>, kind => purchase,
@@ -270,11 +309,38 @@ moored_view() ->
                                  seen_at => 1786528797000},
                      ?LISBON => #{quotes => [], told_at => undefined,
                                   seen_at => 1786528797000}},
+      cash_book => book(),
       news      => [#{fact => you_bought, at => 1786528800000,
                       payload => #{good => ?PEPPER, harbour => ?MACAO,
                                    quantity => 40.0, coin => 581.42}}],
       trouble   => #{},
       at        => 1786528800000}.
+
+%% Built through the aggregate rather than written out, so the fixture cannot
+%% drift away from the projection it is standing in for. It is the same purchase
+%% the orders list above carries: a thousand, less 581.42, is the 418.58 in the
+%% purse.
+book() ->
+    tom_house:cash_book(
+      tom_house:replay([{house_opened_v1, #{purse => 1000.0, ship => ?SHIP, at => 1}},
+                        {purchase_ordered_v1, #{order => <<"5f2c1a">>, harbour => ?MACAO,
+                                                good => ?PEPPER, quantity => 40.0,
+                                                at => 1786528800000}},
+                        {purchase_settled_v1, #{order => <<"5f2c1a">>, coin => 581.42,
+                                                filled => 40.0, at => 1786528800000}}],
+                       tom_house:empty())).
+
+%% Ten movements, which is more than the page shows.
+long_book() ->
+    Trades = [[{purchase_ordered_v1, #{order => integer_to_binary(N), harbour => ?MACAO,
+                                       good => ?PEPPER, quantity => 1.0,
+                                       at => 1786528800000 + N}},
+               {purchase_settled_v1, #{order => integer_to_binary(N), coin => 10.0,
+                                       filled => 1.0, at => 1786528800000 + N}}]
+              || N <- lists:seq(1, 10)],
+    Facts = [{house_opened_v1, #{purse => 10000.0, ship => ?SHIP, at => 1}}
+             | lists:append(Trades)],
+    tom_house:cash_book(tom_house:replay(Facts, tom_house:empty())).
 
 standing_view(Standing) ->
     View = moored_view(),

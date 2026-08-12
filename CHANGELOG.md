@@ -5,6 +5,27 @@ All notable changes to `hecate-tom-house` are recorded here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **The cash book.** `tom_house:cash_book/1` reads the purse as an account: what
+  the house opened with, every movement since, and the balance each one left
+  behind. On the page as a panel, in `/view` whole, and in
+  `scripts/cash-book.sh` for a ledger on a disk.
+- **`scripts/cash-book.sh`** — replays a ledger and prints the account. Opens the
+  file for reading only, so it can be pointed at a house that is up and trading.
+
+### Changed
+
+- **`tom_house:direction/1`** is now the one place that knows which way a kind of
+  movement takes the purse. It was a sign in two clauses of the fold, and a cash
+  book has to answer the same question; a sign rule written twice disagrees with
+  itself the day a third kind of movement arrives.
+- **`opened_with`** is kept on the aggregate. The cash book folds forward from it
+  rather than subtracting from the purse, so its closing balance and `purse/1`
+  are two routes to one answer instead of one number shown twice.
+
 ## [0.1.0] - 2026-08-11
 
 The first house. A player, a purse, a ship and a page.

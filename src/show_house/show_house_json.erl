@@ -26,6 +26,7 @@ snapshot(View) ->
       <<"hold">>    => hold(View),
       <<"market">>  => market(View),
       <<"orders">>  => [order(O) || O <- maps:get(orders, View)],
+      <<"book">>    => book(maps:get(cash_book, View, #{})),
       <<"trouble">> => trouble(maps:get(trouble, View, #{})),
       <<"at">>      => maps:get(at, View)}.
 
@@ -76,6 +77,25 @@ order(Order) ->
       <<"at">>       => maps:get(at, Order),
       <<"coin">>     => maps:get(coin, Order, null),
       <<"reason">>   => spelled(maps:get(reason, Order, undefined))}.
+
+%% The whole book, not the eight rows the page shows. A shell is where somebody
+%% goes to add it up themselves, and truncating it there would defeat that.
+book(Book) when map_size(Book) =:= 0 ->
+    null;
+book(Book) ->
+    #{<<"opened_with">> => maps:get(opened_with, Book),
+      <<"closing">>     => maps:get(closing, Book),
+      <<"entries">>     => [movement(E) || E <- maps:get(entries, Book)]}.
+
+movement(Entry) ->
+    #{<<"at">>      => maps:get(at, Entry),
+      <<"order">>   => maps:get(order, Entry),
+      <<"kind">>    => atom_to_binary(maps:get(kind, Entry), utf8),
+      <<"harbour">> => tom_names:local(maps:get(harbour, Entry)),
+      <<"good">>    => tom_names:local(maps:get(good, Entry)),
+      <<"tons">>    => maps:get(tons, Entry),
+      <<"coin">>    => maps:get(coin, Entry),
+      <<"balance">> => maps:get(balance, Entry)}.
 
 trouble(Trouble) ->
     maps:from_list([{atom_to_binary(Where, utf8),

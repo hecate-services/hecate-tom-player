@@ -21,9 +21,9 @@
 
 -export([empty/0, apply_fact/2, replay/2]).
 -export([purse/1, opened/1, hull/1, cargo/1, hold/1, free_hold/1]).
--export([sight/1, orders/1, unsettled/1, order/2, moved/1]).
+-export([sight/1, orders/1, unsettled/1, order/2, moved/1, cash_book/1]).
 
--export_type([house/0, fact/0, order/0, standing/0]).
+-export_type([house/0, fact/0, order/0, standing/0, book/0, entry/0]).
 
 %% Where the hull is, as far as this house has been told.
 %%
@@ -45,36 +45,52 @@
                    reason     => term(),
                    closed_at  => integer()}.
 
--type house() :: #{opened     := boolean(),
-                   purse      := float(),
-                   ship       := binary() | undefined,
-                   hull       := map() | undefined,
-                   standing   := standing(),
-                   where      := binary() | undefined,
-                   bound_for  := binary() | undefined,
-                   sailed_at  := integer() | undefined,
-                   due_at     := integer() | undefined,
-                   cause      := binary() | undefined,
-                   sighted_at := integer() | undefined,
-                   orders     := #{binary() => order()}}.
+%% One movement of the purse, with the balance it left behind it.
+-type entry() :: #{at       := integer(),
+                   order    := binary(),
+                   kind     := purchase | sale,
+                   harbour  := binary(),
+                   good     := binary(),
+                   tons     := float(),
+                   coin     := float(),
+                   balance  := float()}.
+
+-type book() :: #{opened_with := float(),
+                  entries     := [entry()],
+                  closing     := float()}.
+
+-type house() :: #{opened      := boolean(),
+                   purse       := float(),
+                   opened_with := float(),
+                   ship        := binary() | undefined,
+                   hull        := map() | undefined,
+                   standing    := standing(),
+                   where       := binary() | undefined,
+                   bound_for   := binary() | undefined,
+                   sailed_at   := integer() | undefined,
+                   due_at      := integer() | undefined,
+                   cause       := binary() | undefined,
+                   sighted_at  := integer() | undefined,
+                   orders      := #{binary() => order()}}.
 
 -type fact() :: {atom(), map()}.
 
 %% @doc A house that has never had anything happen to it.
 -spec empty() -> house().
 empty() ->
-    #{opened     => false,
-      purse      => 0.0,
-      ship       => undefined,
-      hull       => undefined,
-      standing   => unknown,
-      where      => undefined,
-      bound_for  => undefined,
-      sailed_at  => undefined,
-      due_at     => undefined,
-      cause      => undefined,
-      sighted_at => undefined,
-      orders     => #{}}.
+    #{opened      => false,
+      purse       => 0.0,
+      opened_with => 0.0,
+      ship        => undefined,
+      hull        => undefined,
+      standing    => unknown,
+      where       => undefined,
+      bound_for   => undefined,
+      sailed_at   => undefined,
+      due_at      => undefined,
+      cause       => undefined,
+      sighted_at  => undefined,
+      orders      => #{}}.
 
 %% @doc Fold a history into a house.
 -spec replay([fact()], house()) -> house().
@@ -89,9 +105,10 @@ replay(Facts, House) -> lists:foldl(fun apply_fact/2, House, Facts).
 %% twice" is the whole reason the pattern is safe.
 -spec apply_fact(fact(), house()) -> house().
 apply_fact({house_opened_v1, F}, #{opened := false} = H) ->
-    H#{opened => true,
-       purse  => maps:get(purse, F),
-       ship   => maps:get(ship, F)};
+    H#{opened      => true,
+       purse       => maps:get(purse, F),
+       opened_with => maps:get(purse, F),
+       ship        => maps:get(ship, F)};
 apply_fact({house_opened_v1, _F}, H) ->
     H;
 
@@ -101,9 +118,9 @@ apply_fact({sale_ordered_v1, F}, H) ->
     placed(sale, F, H);
 
 apply_fact({purchase_settled_v1, F}, H) ->
-    settled(maps:get(filled, F), -maps:get(coin, F), F, H);
+    settled(purchase, maps:get(filled, F), F, H);
 apply_fact({sale_settled_v1, F}, H) ->
-    settled(maps:get(discharged, F), +maps:get(coin, F), F, H);
+    settled(sale, maps:get(discharged, F), F, H);
 
 apply_fact({purchase_refused_v1, F}, H) ->
     refused(F, H);
@@ -169,6 +186,30 @@ unsettled(House) -> [O || #{state := ordered} = O <- orders(House)].
 -spec order(house(), binary()) -> {ok, order()} | error.
 order(#{orders := O}, Key) -> maps:find(Key, O).
 
+%% @doc The purse as an account: what the house opened with, every movement
+%% since, and the balance each one left behind it.
+%%
+%% THIS FOLDS FORWARD AND NEVER SUBTRACTS FROM THE PURSE. A book whose closing
+%% balance is derived from the purse cannot disagree with the purse, and a book
+%% that cannot disagree is decoration. This one starts from what the house opened
+%% with and adds up, so `closing' and `purse/1' are the same question answered by
+%% two routes, and if they ever differ that is worth knowing.
+%%
+%% ORDERED BY WHEN THE MONEY MOVED, which is when a port settled, not when the
+%% order was placed. `orders/1' is newest first because it is a log somebody
+%% scans; this is oldest first because a running balance only means anything read
+%% downwards.
+%%
+%% ONLY A SETTLEMENT MOVES MONEY. An order still open has committed nothing and a
+%% refusal cost nothing, so neither appears here. Both are in `orders/1', which is
+%% where a player looks for what became of an order rather than of a coin.
+-spec cash_book(house()) -> book().
+cash_book(#{opened_with := Opened} = House) ->
+    Settled = lists:sort(fun(#{closed_at := A}, #{closed_at := B}) -> A =< B end,
+                         [O || #{state := settled} = O <- orders(House)]),
+    {Entries, Closing} = lists:mapfoldl(fun entry/2, Opened, Settled),
+    #{opened_with => Opened, entries => Entries, closing => Closing}.
+
 %% @doc How many tons an order actually moved.
 %%
 %% WHAT WAS ASKED FOR AND WHAT MOVED ARE NOT THE SAME NUMBER, and the difference
@@ -182,6 +223,19 @@ moved(#{state := settled} = Order) -> maps:get(moved, Order, 0.0);
 moved(#{quantity := Quantity})     -> Quantity.
 
 %%% Internal
+
+entry(Order, Running) ->
+    Coin    = maps:get(coin, Order),
+    Balance = Running + direction(maps:get(kind, Order)) * Coin,
+    {#{at      => maps:get(closed_at, Order),
+       order   => maps:get(order, Order),
+       kind    => maps:get(kind, Order),
+       harbour => maps:get(harbour, Order),
+       good    => maps:get(good, Order),
+       tons    => moved(Order),
+       coin    => Coin,
+       balance => Balance},
+     Balance}.
 
 placed(Kind, F, #{orders := Orders} = H) ->
     Key = maps:get(order, F),
@@ -200,9 +254,19 @@ minted(false, Kind, Key, F, #{orders := Orders} = H) ->
                                   at       => maps:get(at, F),
                                   state    => ordered}}}.
 
-settled(Moved, Coin, F, H) ->
-    concluded(open_order(F, H), settled, #{coin => abs(Coin), moved => Moved},
-              Coin, F, H).
+%% WHICH WAY A KIND MOVES THE PURSE, in the one place that knows. A cash book
+%% has to answer the same question the fold does, and a sign rule written down
+%% twice is a sign rule that will disagree with itself the day a third kind of
+%% movement arrives. Tax, wages and a toll are all clauses here and nothing else
+%% changes.
+-spec direction(purchase | sale) -> -1 | 1.
+direction(purchase) -> -1;
+direction(sale)     -> +1.
+
+settled(Kind, Moved, F, H) ->
+    Coin = maps:get(coin, F),
+    concluded(open_order(F, H), settled, #{coin => Coin, moved => Moved},
+              direction(Kind) * Coin, F, H).
 
 refused(F, H) ->
     concluded(open_order(F, H), refused, #{reason => maps:get(reason, F)},

@@ -222,6 +222,7 @@ view(#state{names = N, house = H, quotes = Q, news = News, trouble = T}) ->
       free_hold => tom_house:free_hold(H),
       sight     => tom_house:sight(H),
       orders    => tom_house:orders(H),
+      cash_book => tom_house:cash_book(H),
       quotes    => Q,
       news      => News,
       trouble   => T,

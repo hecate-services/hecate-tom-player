@@ -184,7 +184,101 @@ an_order_still_in_flight_shows_what_it_asked_for_test() ->
     {ok, Order} = tom_house:order(H, <<"a">>),
     ?assertEqual(5.0, tom_house:moved(Order)).
 
+%%% The cash book
+
+a_house_that_has_done_nothing_has_an_empty_book_test() ->
+    Book = tom_house:cash_book(tom_house:empty()),
+    ?assertEqual(0.0, maps:get(opened_with, Book)),
+    ?assertEqual([], maps:get(entries, Book)),
+    ?assertEqual(0.0, maps:get(closing, Book)).
+
+the_book_opens_with_what_the_house_opened_with_test() ->
+    Book = tom_house:cash_book(tom_house:replay([opened(1000.0)], tom_house:empty())),
+    ?assertEqual(1000.0, maps:get(opened_with, Book)),
+    ?assertEqual(1000.0, maps:get(closing, Book)).
+
+%% THE POINT OF THE WHOLE THING. The closing balance is reached by adding up
+%% from what the house opened with; the purse is reached by moving one number on
+%% every settlement. Two routes, one answer. A book that took its closing balance
+%% from the purse could never have told us that, and would be decoration.
+the_book_closes_where_the_purse_stands_test() ->
+    H = trading_house(),
+    ?assertEqual(round2(tom_house:purse(H)),
+                 round2(maps:get(closing, tom_house:cash_book(H)))).
+
+a_purchase_is_money_out_and_a_sale_is_money_in_test() ->
+    [Out, In] = maps:get(entries, tom_house:cash_book(trading_house())),
+    ?assertMatch(#{kind := purchase, coin := 581.42, harbour := ?MACAO}, Out),
+    ?assertMatch(#{kind := sale, coin := 900.0, harbour := ?LISBON}, In),
+    ?assertEqual(418.58, round2(maps:get(balance, Out))),
+    ?assertEqual(1318.58, round2(maps:get(balance, In))).
+
+%% Money moves when a port settles, not when an order is placed. An order sent
+%% first can settle second, so the book is in settlement order and the orders
+%% table is not.
+the_book_is_in_the_order_the_money_moved_test() ->
+    H = tom_house:replay([opened(1000.0),
+                          bought(<<"slow">>, 10.0, 2), bought(<<"quick">>, 10.0, 3),
+                          paid(<<"quick">>, 100.0, 4), paid(<<"slow">>, 200.0, 9)],
+                         tom_house:empty()),
+    ?assertMatch([#{order := <<"quick">>}, #{order := <<"slow">>}],
+                 maps:get(entries, tom_house:cash_book(H))).
+
+%% A refusal cost nothing and an order still open has committed nothing. Both
+%% belong in the orders table, where a player looks for what became of an order,
+%% and neither belongs in an account of what became of the money.
+nothing_that_did_not_move_money_is_in_the_book_test() ->
+    H = tom_house:replay([opened(1000.0),
+                          bought(<<"a">>, 10.0, 2), bought(<<"b">>, 10.0, 3),
+                          {purchase_refused_v1, #{order => <<"a">>, at => 4,
+                                                  reason => <<"quay_empty">>}}],
+                         tom_house:empty()),
+    ?assertEqual(2, length(tom_house:orders(H))),
+    ?assertEqual([], maps:get(entries, tom_house:cash_book(H))),
+    ?assertEqual(1000.0, maps:get(closing, tom_house:cash_book(H))).
+
+%% The reliability pattern re-calls an outstanding order after a crash, so one
+%% settlement arrives twice. It is worth one line in the book for the same reason
+%% it is worth one subtraction from the purse.
+settling_twice_is_one_line_in_the_book_test() ->
+    H = tom_house:replay([opened(1000.0), bought(<<"a">>, 10.0, 2),
+                          paid(<<"a">>, 581.42, 3), paid(<<"a">>, 581.42, 3)],
+                         tom_house:empty()),
+    ?assertEqual(1, length(maps:get(entries, tom_house:cash_book(H)))),
+    ?assertEqual(418.58, round2(maps:get(closing, tom_house:cash_book(H)))).
+
+%% A quay holds what it holds, so the tons in the book are the tons that moved
+%% rather than the tons that were asked for.
+the_book_carries_the_tons_that_moved_test() ->
+    H = tom_house:replay([opened(1000.0), bought(<<"a">>, 5.0, 2),
+                          paid_for(<<"a">>, 209.38, 2.4551, 3)],
+                         tom_house:empty()),
+    ?assertMatch([#{tons := 2.4551}], maps:get(entries, tom_house:cash_book(H))).
+
 %%% Fixtures
+
+%% Bought at Macao, sold at Lisbon, and 1000 - 581.42 + 900 to show for it.
+trading_house() ->
+    tom_house:replay([opened(1000.0),
+                      bought(<<"buy">>, 40.0, 2), paid(<<"buy">>, 581.42, 3),
+                      offered(<<"sell">>, 40.0, 4), earned(<<"sell">>, 900.0, 5)],
+                     tom_house:empty()).
+
+bought(Key, Tons, At) ->
+    {purchase_ordered_v1, #{order => Key, harbour => ?MACAO, good => ?PEPPER,
+                            quantity => Tons, at => At}}.
+
+paid(Key, Coin, At) -> paid_for(Key, Coin, 40.0, At).
+
+paid_for(Key, Coin, Filled, At) ->
+    {purchase_settled_v1, #{order => Key, coin => Coin, filled => Filled, at => At}}.
+
+offered(Key, Tons, At) ->
+    {sale_ordered_v1, #{order => Key, harbour => ?LISBON, good => ?PEPPER,
+                        quantity => Tons, at => At}}.
+
+earned(Key, Coin, At) ->
+    {sale_settled_v1, #{order => Key, coin => Coin, discharged => 40.0, at => At}}.
 
 opened(Purse) ->
     {house_opened_v1, #{purse => Purse, ship => ?SHIP, at => 1}}.

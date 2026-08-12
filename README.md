@@ -94,6 +94,8 @@ against a stale local copy of somebody else's fact is worse than a round trip.
 - prices and quay stocks at both ports, side by side, with how old each answer is
 - what is in the hold, and how much of it is free
 - every order, and how each one went, in English rather than in Erlang
+- **the cash book**: what the house opened with, every movement of the purse
+  since, and the balance each one left behind it
 - what a port said while you were watching
 - **the helm**: price it, buy into the hold, sell out of the hold, cast off for
   the other port, and ask everybody again

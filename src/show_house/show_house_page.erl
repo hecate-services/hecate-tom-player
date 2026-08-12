@@ -50,6 +50,7 @@ board(View) ->
      hold(View),
      market(View),
      orders(maps:get(orders, View, [])),
+     cash_book(maps:get(cash_book, View, #{})),
      news(maps:get(news, View, []))].
 
 %%% Sections
@@ -193,6 +194,66 @@ state(#{state := ordered})              -> <<"still asking&hellip;">>.
 
 coin(#{coin := Coin}) -> money(Coin);
 coin(_Order)          -> <<"&mdash;">>.
+
+%% THE ONE TABLE THAT ADDS UP. The orders table above is a log: newest first,
+%% scanned for what became of a thing you asked for. This is an account: oldest
+%% first, because a running balance means nothing except read downwards, and the
+%% last balance in it is the purse arrived at by a different route than the card
+%% at the top of the page.
+cash_book(Book) when map_size(Book) =:= 0 ->
+    <<>>;
+cash_book(Book) ->
+    {Opening, Shown} = window(maps:get(entries, Book, []),
+                              maps:get(opened_with, Book, 0.0)),
+    [<<"<section class=\"panel\"><h2>The cash book</h2>">>,
+     <<"<table><thead><tr><th>When</th><th>What</th>">>,
+     <<"<th class=\"n\">In</th><th class=\"n\">Out</th>">>,
+     <<"<th class=\"n\">Balance</th></tr></thead><tbody>">>,
+     Opening,
+     [book_row(E) || E <- Shown],
+     <<"</tbody></table>">>,
+     <<"<p class=\"sub\">Only a settlement moves money. An order still open has "
+       "committed nothing and a refusal cost nothing, so neither is here.</p>">>,
+     <<"</section>">>].
+
+%% The last eight movements, and when there are more the book opens with what
+%% was brought forward rather than with the genesis purse. Keeping the opening
+%% balance above a window that dropped the earlier rows would print a column
+%% that does not add up, which is the one thing a cash book may not do.
+window(Entries, Opened) when length(Entries) =< 8 ->
+    {opening(<<"The house opened">>, Opened), Entries};
+window(Entries, _Opened) ->
+    {Earlier, Kept} = lists:split(length(Entries) - 8, Entries),
+    {opening(<<"Brought forward">>, maps:get(balance, lists:last(Earlier))), Kept}.
+
+opening(What, Balance) ->
+    [<<"<tr class=\"o-opening\"><td>&mdash;</td><td>">>, What,
+     <<"</td><td class=\"n empty\">&mdash;</td><td class=\"n empty\">&mdash;</td>">>,
+     <<"<td class=\"n\">">>, money(Balance), <<"</td></tr>">>].
+
+book_row(Entry) ->
+    Kind = maps:get(kind, Entry),
+    [<<"<tr><td>">>, clock(maps:get(at, Entry)), <<"</td><td>">>,
+     movement(Kind, Entry), <<"</td>">>,
+     money_in(Kind, Entry), money_out(Kind, Entry),
+     <<"<td class=\"n\">">>, money(maps:get(balance, Entry)), <<"</td></tr>">>].
+
+movement(purchase, E) ->
+    [<<"Bought ">>, quantity(maps:get(tons, E)), <<" of ">>,
+     esc(tom_names:local(maps:get(good, E))), <<" at ">>,
+     esc(tom_names:local(maps:get(harbour, E)))];
+movement(sale, E) ->
+    [<<"Sold ">>, quantity(maps:get(tons, E)), <<" of ">>,
+     esc(tom_names:local(maps:get(good, E))), <<" at ">>,
+     esc(tom_names:local(maps:get(harbour, E)))].
+
+%% A column carries a number only when the money went that way. A zero in the
+%% other one reads as a movement of nothing, which is not what happened.
+money_in(sale, E)       -> [<<"<td class=\"n\">">>, money(maps:get(coin, E)), <<"</td>">>];
+money_in(_Kind, _E)     -> <<"<td class=\"n empty\">&mdash;</td>">>.
+
+money_out(purchase, E)  -> [<<"<td class=\"n\">">>, money(maps:get(coin, E)), <<"</td>">>];
+money_out(_Kind, _E)    -> <<"<td class=\"n empty\">&mdash;</td>">>.
 
 news([]) ->
     <<>>;
@@ -488,6 +549,7 @@ css() ->
       "font-size:.85rem;margin-right:.4rem}"
       ".o-refused td{color:var(--bad)}"
       ".o-ordered td{color:var(--warn)}"
+      ".o-opening td{color:var(--dim);font-style:italic}"
       ".helm{position:sticky;bottom:0;background:var(--card);"
       "border:1px solid var(--line);border-radius:.4rem;padding:.9rem 1rem;"
       "box-shadow:0 -.4rem 1.2rem rgba(0,0,0,.08)}"
