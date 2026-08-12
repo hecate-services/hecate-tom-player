@@ -1,4 +1,4 @@
--sname hecate_tom_house
+-sname hecate_tom_player
 -setcookie ${TOM_COOKIE}
 
 +K true

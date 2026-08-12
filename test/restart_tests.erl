@@ -325,7 +325,7 @@ a_path() ->
     Unique = erlang:phash2({erlang:system_time(nanosecond),
                             erlang:unique_integer([positive])}),
     filename:join([os:getenv("TMPDIR", "/tmp"),
-                   "hecate_tom_house_test",
+                   "hecate_tom_player_test",
                    integer_to_list(Unique),
                    "house.log"]).
 

@@ -21,7 +21,7 @@
         {station_seeds,     [<<"${TOM_STATION_SEED}">>]}
     ]},
 
-    {hecate_tom_house, [
+    {hecate_tom_player, [
         %% THE REALM NAME. Goes inside every MRI and every topic. All three
         %% services in a game must agree on this exactly.
         {realm_name,         <<"${TOM_REALM_NAME}">>},

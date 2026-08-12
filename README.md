@@ -1,9 +1,17 @@
-# hecate-tom-house
+# hecate-tom-player
 
 **TOM, Traders of Macao.** The player: one purse, one ship, one page.
 
 *This exists so a human can buy pepper at Macao, watch the ship cross to Lisbon,
 sell it there, and see the purse move.*
+
+**A player is the person, and a house is the estate they keep.** The service was
+called `hecate-tom-house` until 2026-08-13 and was renamed because the binary is
+about to hold a magnate and a mayor beside the trader, and to be driven by a
+policy as readily as by a human at the page. What it owns stays a house:
+`tom_house` is still the aggregate, `keep_house` still the process that owns the
+purse. See
+[DESIGN_TWO_SERVICES.md](../hecate-tom-general/design/DESIGN_TWO_SERVICES.md).
 
 A house is a **pure client**. It advertises nothing on the mesh and nothing ever
 calls it, which is exactly why it can be shut down for an entire voyage and be
@@ -138,19 +146,19 @@ find each other over the mesh.
 
 ```bash
 rebar3 as prod release
-_build/prod/rel/hecate_tom_house/bin/hecate_tom_house foreground
+_build/prod/rel/hecate_tom_player/bin/hecate_tom_player foreground
 ```
 
 ### As a container
 
 ```bash
-podman build -t hecate-tom-house .
+podman build -t hecate-tom-player .
 podman run --rm \
     -p 8460:8460 -p 8461:8461 \
-    -v tom-house-data:/var/lib/hecate-tom-house \
+    -v tom-house-data:/var/lib/hecate-tom-player \
     -e TOM_REALM_TAG=<64 hex characters> \
     -e TOM_STATION_SEED=quic://station.example:4433 \
-    hecate-tom-house
+    hecate-tom-player
 ```
 
 ⚠ **The volume is not optional.** Without it every restart is a new player with a

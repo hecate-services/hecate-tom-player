@@ -14,7 +14,7 @@
 %% trade, and the correct behaviour then is to fall over so /health says so, not
 %% to spin quietly forever refusing to remember anything.
 %% @end
--module(hecate_tom_house_sup).
+-module(hecate_tom_player_sup).
 -behaviour(supervisor).
 
 -export([start_link/1]).

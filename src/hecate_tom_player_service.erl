@@ -11,14 +11,14 @@
 %% service that comes up healthy, answers /health, shows an empty page and
 %% reaches nobody, which is the most expensive kind of working.
 %% @end
--module(hecate_tom_house_service).
+-module(hecate_tom_player_service).
 -behaviour(hecate_om_service).
 
 -export([start/1, stop/1, health/0, capabilities/0, identity_spec/0, info/0]).
 -export([configured/0]).
 
 start(_Opts) ->
-    hecate_tom_house_sup:start_link(configured()).
+    hecate_tom_player_sup:start_link(configured()).
 
 stop(_State) ->
     ok.
@@ -43,7 +43,7 @@ identity_spec() ->
       ttl_days  => 30}.
 
 info() ->
-    #{name        => <<"hecate-tom-house">>,
+    #{name        => <<"hecate-tom-player">>,
       version     => version(),
       description => <<"TOM, Traders of Macao: the player's house, purse and ship">>}.
 
@@ -67,18 +67,18 @@ named({ok, Names}) ->
       quote_interval_ms  => env(quote_interval_ms),
       locate_interval_ms => env(locate_interval_ms)};
 named({error, Faults}) ->
-    error({hecate_tom_house_misconfigured, Faults}).
+    error({hecate_tom_player_misconfigured, Faults}).
 
 standing(undefined, _Mesh)     -> {down, no_keeper};
 standing(_Pid, {ok, _Pool})    -> ok;
 standing(_Pid, {error, Reason}) -> {degraded, {not_on_the_mesh, Reason}}.
 
-env(Key) -> set(application:get_env(hecate_tom_house, Key), Key).
+env(Key) -> set(application:get_env(hecate_tom_player, Key), Key).
 
 set({ok, Value}, _Key) -> Value;
-set(undefined, Key)    -> error({hecate_tom_house_unconfigured, Key}).
+set(undefined, Key)    -> error({hecate_tom_player_unconfigured, Key}).
 
-version() -> reported(application:get_key(hecate_tom_house, vsn)).
+version() -> reported(application:get_key(hecate_tom_player, vsn)).
 
 reported({ok, Vsn}) -> list_to_binary(Vsn);
 reported(undefined) -> <<"0.0.0">>.

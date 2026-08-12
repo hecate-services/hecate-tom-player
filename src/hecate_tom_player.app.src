@@ -1,9 +1,9 @@
-{application, hecate_tom_house, [
+{application, hecate_tom_player, [
     {description, "TOM, Traders of Macao: the player's house, purse and ship"},
     {vsn, "0.1.0"},
-    {registered, [hecate_tom_house_sup, keep_house, watch_ports, read_quotes,
+    {registered, [hecate_tom_player_sup, keep_house, watch_ports, read_quotes,
                   find_ship, settle_orders]},
-    {mod, {hecate_tom_house_app, []}},
+    {mod, {hecate_tom_player_app, []}},
     {applications, [
         kernel,
         stdlib,
@@ -45,7 +45,7 @@
         %% The house's own durable log. Everything it must not forget is here:
         %% the purse, every order and its settlement, and the last picture it
         %% had of its ship.
-        {ledger, "/var/lib/hecate-tom-house/house.log"},
+        {ledger, "/var/lib/hecate-tom-player/house.log"},
 
         %% The page.
         {web_port, 8461},
@@ -61,6 +61,6 @@
     {modules, []},
     {licenses, ["Apache-2.0"]},
     {links, [
-        {"GitHub", "https://github.com/hecate-services/hecate-tom-house"}
+        {"GitHub", "https://github.com/hecate-services/hecate-tom-player"}
     ]}
 ]}.

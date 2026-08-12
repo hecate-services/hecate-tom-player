@@ -24,8 +24,8 @@ trap 'kill "${node_pid:-0}" 2>/dev/null || true; rm -rf "$run_dir"' EXIT
 erl -noshell \
     -pa _build/default/lib/*/ebin \
     -config config/local \
-    -hecate_tom_house ledger "\"$run_dir/house.log\"" \
-    -eval 'application:ensure_all_started(hecate_tom_house), receive stop -> ok end.' \
+    -hecate_tom_player ledger "\"$run_dir/house.log\"" \
+    -eval 'application:ensure_all_started(hecate_tom_player), receive stop -> ok end.' \
     > "$log" 2>&1 &
 node_pid=$!
 

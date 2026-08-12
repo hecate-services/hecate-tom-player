@@ -35,7 +35,7 @@ ledger="${1:-}"
 
 libs="${house}/_build/default/lib"
 
-[ -d "${libs}/hecate_tom_house/ebin" ] || {
+[ -d "${libs}/hecate_tom_player/ebin" ] || {
     printf 'nothing built yet. Run: rebar3 compile\n' >&2
     exit 1
 }

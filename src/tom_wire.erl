@@ -81,4 +81,4 @@ subscribe(Topic, Subscriber) -> (carrier()):subscribe(Topic, Subscriber).
 %% mesh. In a test it is a module that answers from a script, which is how the
 %% restart path is exercised without a station within a hundred kilometres.
 carrier() ->
-    application:get_env(hecate_tom_house, wire, tom_wire_macula).
+    application:get_env(hecate_tom_player, wire, tom_wire_macula).

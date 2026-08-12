@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to `hecate-tom-house` are recorded here.
+All notable changes to `hecate-tom-player` are recorded here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -69,4 +69,4 @@ The first house. A player, a purse, a ship and a page.
 - The brief asks for a warehouse and a load button; the contract forbids both.
   Built to the contract.
 
-[0.1.0]: https://github.com/hecate-services/hecate-tom-house/releases/tag/v0.1.0
+[0.1.0]: https://github.com/hecate-services/hecate-tom-player/releases/tag/v0.1.0

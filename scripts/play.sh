@@ -26,4 +26,4 @@ echo "snapshot : curl -s http://localhost:8461/view | jq ."
 echo "ledger   : $here/run/house.log"
 echo
 
-exec rebar3 shell --config "$config" --apps hecate_tom_house
+exec rebar3 shell --config "$config" --apps hecate_tom_player

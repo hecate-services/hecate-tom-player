@@ -6,13 +6,13 @@
 %% store is started: this service keeps its own small append-only log and needs
 %% nothing bigger.
 %% @end
--module(hecate_tom_house_app).
+-module(hecate_tom_player_app).
 -behaviour(application).
 
 -export([start/2, stop/1]).
 
 start(_Type, _Args) ->
-    hecate_om:boot(hecate_tom_house_service).
+    hecate_om:boot(hecate_tom_player_service).
 
 stop(_State) ->
     ok.

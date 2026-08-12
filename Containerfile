@@ -1,10 +1,10 @@
-# hecate-tom-house
+# hecate-tom-player
 #
 # TOM, Traders of Macao: the player's house, purse and ship.
 #
 # THIS IMAGE HAS A DATA VOLUME AND IT IS NOT OPTIONAL. The house keeps its purse,
 # every order and how it concluded, and the last picture it had of its ship in an
-# append-only log. Run this image without a volume on /var/lib/hecate-tom-house
+# append-only log. Run this image without a volume on /var/lib/hecate-tom-player
 # and every restart is a new player with a fresh thousand coins, which is a money
 # printer with a container runtime attached.
 
@@ -40,15 +40,15 @@ FROM docker.io/alpine:3.22
 # LINKS THE PACKAGE TO THE REPOSITORY. On registries that read it, ghcr among
 # them, a package without this label is an orphan: it does not appear on the
 # repository page and does not inherit its visibility.
-LABEL org.opencontainers.image.source="https://github.com/hecate-services/hecate-tom-house"
+LABEL org.opencontainers.image.source="https://github.com/hecate-services/hecate-tom-player"
 RUN apk add --no-cache ncurses-libs libstdc++ libgcc openssl ca-certificates curl
 WORKDIR /app
-COPY --from=builder /build/_build/prod/rel/hecate_tom_house ./
+COPY --from=builder /build/_build/prod/rel/hecate_tom_player ./
 
 ENV HOME=/app
 ENV RELX_REPLACE_OS_VARS=true
 
-ENV TOM_COOKIE=hecate_tom_house
+ENV TOM_COOKIE=hecate_tom_player
 ENV TOM_HEALTH_PORT=8460
 ENV TOM_WEB_PORT=8461
 ENV TOM_REALM_NAME=io.macula
@@ -57,7 +57,7 @@ ENV TOM_SHIP=santa_clara
 ENV TOM_HARBOURS=macao,lisbon
 ENV TOM_GOODS=pepper,nutmeg,raw_silk,porcelain
 ENV TOM_PURSE=1000.0
-ENV TOM_LEDGER=/var/lib/hecate-tom-house/house.log
+ENV TOM_LEDGER=/var/lib/hecate-tom-player/house.log
 ENV TOM_QUOTE_INTERVAL_MS=5000
 ENV TOM_LOCATE_INTERVAL_MS=10000
 
@@ -65,7 +65,7 @@ ENV TOM_LOCATE_INTERVAL_MS=10000
 # guessed a realm would announce itself where nobody can attribute it and reach
 # nobody, which looks exactly like a healthy node.
 
-VOLUME ["/var/lib/hecate-tom-house"]
+VOLUME ["/var/lib/hecate-tom-player"]
 VOLUME ["/etc/hecate/secrets"]
 
 EXPOSE 8460 8461
@@ -76,4 +76,4 @@ EXPOSE 8460 8461
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
     CMD curl -fsS "http://127.0.0.1:${TOM_HEALTH_PORT}/health" || exit 1
 
-CMD ["/app/bin/hecate_tom_house", "foreground"]
+CMD ["/app/bin/hecate_tom_player", "foreground"]

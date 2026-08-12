@@ -20,7 +20,7 @@ install(Fun) when is_function(Fun, 2) ->
     forget(),
     ?TAB = ets:new(?TAB, [named_table, public, ordered_set]),
     persistent_term:put(?ANSWER, Fun),
-    application:set_env(hecate_tom_house, wire, ?MODULE).
+    application:set_env(hecate_tom_player, wire, ?MODULE).
 
 -spec forget() -> ok.
 forget() ->
