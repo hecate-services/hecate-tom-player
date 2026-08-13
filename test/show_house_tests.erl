@@ -55,9 +55,7 @@ the_board_shows_the_purse_the_hold_and_both_ports_test() ->
 %% like contradictions.
 each_standing_has_a_sentence_test() ->
     Sentences = [{moored, <<"alongside at macao">>},
-                 {consigned, <<"consigned at macao">>},
                  {in_passage, <<"at sea, bound for lisbon">>},
-                 {made_landfall, <<"still knocking">>},
                  {was_lost, <<"lost to pirates">>},
                  {never_sailed, <<"never sailed">>},
                  {unknown, <<"nobody asked yet">>}],
@@ -66,8 +64,8 @@ each_standing_has_a_sentence_test() ->
     ok.
 
 %% A ship at sea shows when she is due and how long is left, and NEVER how long
-%% a crossing takes. That number is the ocean's constant and recovering it here
-%% by subtracting two of the ocean's own timestamps is exactly the leak that
+%% a crossing takes. That number is the sea's constant and recovering it here
+%% by subtracting two of a port's own timestamps is exactly the leak that
 %% putting an instant on the wire exists to prevent.
 a_ship_at_sea_shows_a_countdown_test() ->
     Board = flat(show_house_page:board(standing_view(in_passage))),
@@ -352,9 +350,8 @@ standing_view(Standing) ->
                                             cause     => cause(Standing)}}.
 
 where(moored)     -> ?MACAO;
-where(consigned)  -> ?MACAO;
-where(in_passage) -> ?OCEAN;
-where(_Other)     -> ?OCEAN.
+where(in_passage) -> ?MACAO;
+where(_Other)     -> ?MACAO.
 
 bound(moored)       -> undefined;
 bound(never_sailed) -> undefined;

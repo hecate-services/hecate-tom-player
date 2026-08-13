@@ -1,4 +1,4 @@
-%% @doc What this house calls itself, the ports, the ocean and the goods.
+%% @doc What this house calls itself, the ports and the goods.
 %%
 %% Two realms exist and they are not the same thing. The realm NAME is a binary
 %% like `<<"io.macula">>' and it goes INSIDE every MRI and every topic. The realm
@@ -20,7 +20,7 @@
 -module(tom_names).
 
 -export([read/1]).
--export([house/2, ship/2, ocean/1, harbour/2, good/2]).
+-export([house/2, ship/2, harbour/2, good/2]).
 -export([procedure/2]).
 -export([facts/1]).
 -export([local/1, is_harbour/1]).
@@ -34,7 +34,6 @@
 -type names() :: #{realm_name := binary(),
                    house      := binary(),
                    ship       := binary(),
-                   ocean      := binary(),
                    harbours   := [{binary(), binary()}],
                    goods      := [{binary(), binary()}],
                    facts      := [{atom(), binary()}]}.
@@ -47,8 +46,7 @@
 read(Config) ->
     Realm   = maps:get(realm_name, Config),
     Singles = [{house, house(Realm, maps:get(player, Config))},
-               {ship,  ship(Realm, maps:get(ship, Config))},
-               {ocean, ocean(Realm)}],
+               {ship,  ship(Realm, maps:get(ship, Config))}],
     Ports   = [{N, harbour(Realm, N)} || N <- listed(maps:get(harbours, Config))],
     Wares   = [{N, good(Realm, N)}    || N <- listed(maps:get(goods, Config))],
     Faults  = faults(Singles) ++ faults(Ports) ++ faults(Wares) ++
@@ -63,9 +61,6 @@ house(Realm, Player) -> instance(Realm, [<<"tom">>, <<"house">>, Player]).
 -spec ship(binary(), binary()) -> {ok, binary()} | {error, term()}.
 ship(Realm, Name) -> instance(Realm, [<<"tom">>, <<"ship">>, Name]).
 
-%% @doc The ocean. There is exactly one, so it carries no name.
--spec ocean(binary()) -> {ok, binary()} | {error, term()}.
-ocean(Realm) -> instance(Realm, [<<"tom">>, <<"ocean">>]).
 
 %% @doc A port, as a running service rather than as a place.
 %%
@@ -100,9 +95,8 @@ facts(Realm) ->
      {cargo_discharged, fact(Realm, <<"harbour">>, <<"trade">>,   <<"cargo_discharged">>)},
      {ship_moored,      fact(Realm, <<"harbour">>, <<"custody">>, <<"ship_moored">>)},
      {ship_consigned,   fact(Realm, <<"harbour">>, <<"custody">>, <<"ship_consigned">>)},
-     {ship_sailed,      fact(Realm, <<"ocean">>,   <<"voyage">>,  <<"ship_sailed">>)},
-     {landfall_made,    fact(Realm, <<"ocean">>,   <<"voyage">>,  <<"landfall_made">>)},
-     {ship_lost,        fact(Realm, <<"ocean">>,   <<"voyage">>,  <<"ship_lost">>)}].
+     {ship_sailed,      fact(Realm, <<"harbour">>, <<"voyage">>,  <<"ship_sailed">>)},
+     {ship_lost,        fact(Realm, <<"harbour">>, <<"voyage">>,  <<"ship_lost">>)}].
 
 %% @doc The last segment of an MRI, for showing a human.
 %%
@@ -158,7 +152,6 @@ assembled([], Realm, Singles, Ports, Wares) ->
     {ok, #{realm_name => Realm,
            house      => taken(house, Singles),
            ship       => taken(ship, Singles),
-           ocean      => taken(ocean, Singles),
            harbours   => [{N, M} || {N, {ok, M}} <- Ports],
            goods      => [{N, M} || {N, {ok, M}} <- Wares],
            facts      => facts(Realm)}};

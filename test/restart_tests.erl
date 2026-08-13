@@ -15,7 +15,6 @@
 
 -define(SHIP, <<"mri:instance:io.macula/tom/ship/santa_clara">>).
 -define(HOUSE, <<"mri:instance:io.macula/tom/house/raf">>).
--define(OCEAN, <<"mri:instance:io.macula/tom/ocean">>).
 -define(MACAO, <<"mri:instance:io.macula/tom/harbour/macao">>).
 -define(LISBON, <<"mri:instance:io.macula/tom/harbour/lisbon">>).
 -define(PEPPER, <<"mri:class:io.macula/tom/good/pepper">>).
@@ -55,7 +54,7 @@ a_voyage_survives_a_shutdown(Ledger) ->
         ?assertEqual(#{?PEPPER => 40.0}, cargo()),
 
         {ok, _Consigned} = sail_ship:to(?LISBON),
-        ?assertMatch(#{standing := consigned, bound_for := ?LISBON}, sight()),
+        ?assertMatch(#{standing := in_passage, bound_for := ?LISBON}, sight()),
         shut(First),
 
         %% --- the crossing happens with nobody at home -----------------------
@@ -69,7 +68,7 @@ a_voyage_survives_a_shutdown(Ledger) ->
         ?assertEqual(418.58, purse()),
 
         %% And the last picture it had of the ship is still there.
-        ?assertMatch(#{standing := consigned, where := ?MACAO}, sight()),
+        ?assertMatch(#{standing := in_passage, where := ?MACAO}, sight()),
 
         %% Three questions, and the house is right again.
         ok = look(),
@@ -343,21 +342,23 @@ nearly_full_at_macao() ->
                       {refused, {call_error, 16#0F, unknown_error}}})).
 
 at_lisbon() ->
-    answering(#{voyage() => {ok, #{<<"state">>     => <<"made_landfall">>,
-                                   <<"bound_for">> => ?LISBON,
-                                   <<"moored">>    => true}},
-                ship_at(?MACAO) => {ok, #{<<"state">> => <<"not_here">>}},
+    answering(#{ship_at(?MACAO) => {ok, #{<<"state">> => <<"not_here">>}},
                 ship_at(?LISBON) => {ok, #{<<"state">> => <<"moored">>,
                                            <<"ship">>  => hull(2, #{?PEPPER => 40.0})}},
                 at(?LISBON, <<"sell_cargo">>) =>
                     {ok, #{<<"discharged">> => 40.0, <<"coin">> => 900.0,
                            <<"ship">> => hull(2, #{})}}}).
 
+%% AT SEA IS A PORT'S ANSWER NOW. She left Macao, Macao still holds her on paper
+%% until Lisbon says held, so Macao is who says she is under way and when she is
+%% due. There is nobody else to ask.
 at_sea() ->
-    answering(#{voyage() => {ok, #{<<"state">>     => <<"in_passage">>,
-                                   <<"bound_for">> => ?LISBON,
-                                   <<"sailed_at">> => 1786528800000,
-                                   <<"due_at">>    => 1786528890000}}}).
+    answering(#{ship_at(?MACAO) => {ok, #{<<"state">>     => <<"in_passage">>,
+                                          <<"ship">>      => hull(1, #{}),
+                                          <<"bound_for">> => ?LISBON,
+                                          <<"sailed_at">> => 1786528800000,
+                                          <<"due_at">>    => 1786528890000}},
+                ship_at(?LISBON) => {ok, #{<<"state">> => <<"not_here">>}}}).
 
 silence() ->
     answering(#{}).
@@ -380,8 +381,7 @@ refusing_to_sell() ->
 %% The quote scales with the quantity asked for, the way a real quay does,
 %% because a fixed answer would make "the purse will not stretch" untestable.
 macao(Aboard) ->
-    #{voyage() => {ok, #{<<"state">> => <<"never_sailed">>}},
-      ship_at(?MACAO) => {ok, #{<<"state">> => <<"moored">>,
+    #{ship_at(?MACAO) => {ok, #{<<"state">> => <<"moored">>,
                                 <<"ship">>  => hull(0, Aboard)}},
       ship_at(?LISBON) => {ok, #{<<"state">> => <<"not_here">>}},
       at(?MACAO, <<"quote_purchase">>) =>
@@ -401,7 +401,8 @@ macao(Aboard) ->
           {ok, #{<<"ship">>         => ?SHIP,
                  <<"hop">>          => 1,
                  <<"bound_for">>    => ?LISBON,
-                 <<"consigned_to">> => ?OCEAN}}}.
+                 <<"consigned_to">> => ?LISBON,
+                 <<"due_at">>       => 1786528890000}}}.
 
 aboard(Aboard, Tons) ->
     Aboard#{?PEPPER => maps:get(?PEPPER, Aboard, 0.0) + Tons}.
@@ -414,8 +415,6 @@ answering(Script) ->
 
 answer(Fun, Payload) when is_function(Fun, 1) -> Fun(Payload);
 answer(Answer, _Payload)                      -> Answer.
-
-voyage() -> at(?OCEAN, <<"get_voyage">>).
 
 ship_at(Harbour) -> at(Harbour, <<"get_ship">>).
 

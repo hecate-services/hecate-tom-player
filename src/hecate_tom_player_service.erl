@@ -39,7 +39,7 @@ identity_spec() ->
     #{scope     => <<"tom_house">>,
       actions   => [<<"buy_cargo">>, <<"sell_cargo">>, <<"sail_ship">>,
                     <<"read_market">>, <<"find_ship">>],
-      resources => [<<"tom/harbour/*">>, <<"tom/ocean">>],
+      resources => [<<"tom/harbour/*">>],
       ttl_days  => 30}.
 
 info() ->

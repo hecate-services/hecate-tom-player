@@ -3,7 +3,7 @@
 %%   quote  what would this cost, before any money moves
 %%   buy    into the hold, at the port she is lying in
 %%   sell   out of the hold, at the port she is lying in
-%%   sail   consign her to the ocean, bound for another port
+%%   sail   send her to sea, bound for another port
 %%   ask    go and ask everybody where she is and what things cost
 %%
 %% THE FORMS WORK WITHOUT JAVASCRIPT. A plain browser posts and is sent back to
@@ -36,7 +36,7 @@ did(<<"sail">>, Fields) ->
 did(<<"ask">>, _Fields) ->
     ok = find_ship:look(),
     ok = read_quotes:ask_now(),
-    {true, <<"Asked the ocean and both ports.">>};
+    {true, <<"Asked every port.">>};
 did(_Anything_else, _Fields) ->
     {false, <<"That is not something this house does.">>}.
 
@@ -86,7 +86,7 @@ traded(_Verb, Answer) ->
     stumbled(Answer).
 
 sailed({ok, _Reply}) ->
-    {true, <<"She is consigned, and on her way as soon as the ocean takes her.">>};
+    {true, <<"She has sailed.">>};
 sailed(Answer) ->
     stumbled(Answer).
 

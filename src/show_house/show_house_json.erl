@@ -33,9 +33,9 @@ snapshot(View) ->
 %%% Internal
 
 %% `due_in_ms' is computed here, against the snapshot's own instant, so a
-%% consumer never has to reconcile its clock with the ocean's. The length of a
-%% crossing is NOT here and must not be: it is the ocean's constant and it stays
-%% there.
+%% consumer never has to reconcile its clock with a port's. The length of a
+%% crossing is NOT here and must not be: it is the sea's constant, it lives in
+%% tom_passage at the port she sailed from, and it stays there.
 whereabouts(Sight, Now) ->
     #{<<"standing">>   => atom_to_binary(maps:get(standing, Sight), utf8),
       <<"where">>      => shortened(maps:get(where, Sight)),

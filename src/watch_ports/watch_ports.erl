@@ -1,4 +1,4 @@
-%% @doc Listen to the seven facts the ports and the ocean publish.
+%% @doc Listen to the six facts the ports publish.
 %%
 %% NOTHING HERE IS LOAD-BEARING, and that is the design rather than a weakness.
 %% A missed fact costs a line in the ticker, never a coin and never a ton.
@@ -34,7 +34,7 @@ start_link(Config) ->
 %% @doc Whether a publication is about this house's ship.
 %%
 %% `ship_moored_v1' carries the whole ship map where the others carry its
-%% identifier, because the port that just took custody has the map and the ocean
+%% identifier, because the port that just took custody has the map and a port
 %% announcing a departure does not. The producer owns the content of what it
 %% publishes; the consumer accepts it and reads both shapes.
 -spec ours(map(), binary()) -> boolean().

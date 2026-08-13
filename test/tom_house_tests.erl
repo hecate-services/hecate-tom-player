@@ -110,17 +110,18 @@ a_sighting_at_a_lower_hop_is_older_news_test() ->
     ?assertMatch(#{where := ?LISBON}, tom_house:sight(H)),
     ?assertEqual(#{?PEPPER => 40.0}, tom_house:cargo(H)).
 
-%% Mooring and consignment happen at the SAME hop, because a consignment is not
-%% a hop. An equal hop therefore has to be allowed through or the picture freezes
-%% at "alongside" for a ship that has been committed to a voyage.
+%% Mooring and sailing happen at the SAME hop, because leaving is not a hop: the
+%% hop advances when the far port takes her. An equal hop therefore has to be
+%% allowed through or the picture freezes at "alongside" for a ship that is
+%% already at sea.
 an_equal_hop_still_changes_the_picture_test() ->
     H = tom_house:replay([opened(1000.0),
                           sighted(moored, ?MACAO, hull(6, #{})),
-                          sighted(consigned, ?MACAO, hull(6, #{}))],
+                          sighted(in_passage, ?MACAO, hull(6, #{}))],
                          tom_house:empty()),
-    ?assertMatch(#{standing := consigned}, tom_house:sight(H)).
+    ?assertMatch(#{standing := in_passage}, tom_house:sight(H)).
 
-%% At sea the ocean answers with no ship map, because it cannot see cargo. The
+%% At sea a sight can arrive with no ship map on it. The
 %% picture of the hold must survive that, or a player watching a voyage sees
 %% their cargo vanish and come back.
 a_sighting_without_a_hull_keeps_the_hold_test() ->

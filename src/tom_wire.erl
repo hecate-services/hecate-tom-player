@@ -1,4 +1,4 @@
-%% @doc How this house reaches the ports and the ocean, and how it tells a "no"
+%% @doc How this house reaches the ports, and how it tells a "no"
 %% from a "not now".
 %%
 %% This exists because the whole reliability pattern turns on ONE distinction:

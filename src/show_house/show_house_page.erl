@@ -11,9 +11,9 @@
 %%
 %% NO DURATION IS EVER SHOWN FOR A PASSAGE. The page shows when a ship sailed,
 %% when it is due, and how long is left. It does not show how long the crossing
-%% takes and it must not, because that number is the ocean's constant and
-%% subtracting two of the ocean's own timestamps to recover it is exactly the
-%% leak the contract puts an instant on the wire to prevent.
+%% takes and it must not, because that number is the sea's constant and
+%% subtracting two of a port's own timestamps to recover it is exactly the leak
+%% the contract puts an instant on the wire to prevent.
 %%
 %% Two vocabularies meet in the ticker and it is deliberate. An item that came
 %% off the mesh carries the publisher's own payload, with binary keys, verbatim,
@@ -80,16 +80,10 @@ card(Title, Big, Sub) ->
 %% destination has not confirmed, and a house that has not asked anybody yet.
 standing(#{standing := moored, where := Where}, _View) ->
     [<<"alongside at ">>, esc(tom_names:local(Where))];
-standing(#{standing := consigned, where := Where, bound_for := Bound}, _View) ->
-    [<<"consigned at ">>, esc(tom_names:local(Where)),
-     <<", bound for ">>, esc(tom_names:local(Bound))];
 standing(#{standing := in_passage, bound_for := Bound, due_at := Due}, View) ->
     [<<"at sea, bound for ">>, esc(tom_names:local(Bound)),
      <<"<br><span class=\"due\">due ">>, clock(Due), <<" &middot; ">>,
      countdown(Due, maps:get(at, View)), <<"</span>">>];
-standing(#{standing := made_landfall, bound_for := Bound}, _View) ->
-    [<<"made landfall at ">>, esc(tom_names:local(Bound)),
-     <<"<br><span class=\"due\">the ocean is still knocking at her door</span>">>];
 standing(#{standing := was_lost, cause := Cause, bound_for := Bound}, _View) ->
     [<<"<span class=\"bad\">lost to ">>, esc(cause(Cause)), <<"</span>">>,
      <<"<br><span class=\"due\">she was bound for ">>,
@@ -285,10 +279,6 @@ item(cargo_discharged, P) ->
 item(ship_moored, P) ->
     [<<"She is alongside at ">>,
      esc(tom_names:local(maps:get(<<"harbour">>, P, <<"?">>))), <<".">>];
-item(ship_consigned, P) ->
-    [<<"She is consigned at ">>,
-     esc(tom_names:local(maps:get(<<"harbour">>, P, <<"?">>))), <<", bound for ">>,
-     esc(tom_names:local(maps:get(<<"bound_for">>, P, <<"?">>))), <<".">>];
 item(ship_sailed, P) ->
     [<<"She sailed for ">>,
      esc(tom_names:local(maps:get(<<"bound_for">>, P, <<"?">>))), <<", due ">>,
@@ -416,10 +406,7 @@ say(Other) ->
 %% Everything else in this game is written in careful English, and this one
 %% clause used to print the standing atom straight into a sentence: "She is
 %% was_lost." A player should never be shown the inside of the machine.
-where_she_is(consigned)      -> <<"She is consigned and waiting for the sea.">>;
 where_she_is(in_passage)     -> <<"She is at sea.">>;
-where_she_is(made_landfall)  -> <<"She has made landfall and is not yet "
-                                  "alongside.">>;
 where_she_is(was_lost)       -> <<"She is lost.">>;
 where_she_is(never_sailed)   -> <<"She has never sailed.">>;
 where_she_is(_Not_yet_known) -> <<"Where she is is not known just now.">>.

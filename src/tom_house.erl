@@ -27,11 +27,18 @@
 
 %% Where the hull is, as far as this house has been told.
 %%
+%% CONSIGNED AND MADE_LANDFALL ARE GONE, with the ocean that made them visible.
+%% Consignment and departure were two moments while a sea had to come and collect
+%% her; they are one now. And landfall was "arrived, not yet accepted", which
+%% only a third party watching both ends could ever see: the port she sailed from
+%% answers `in_passage' until the far port says held, so an arrival at a dark
+%% port is a ship still at sea and overdue, which is what it looks like from here
+%% anyway.
+%%
 %% `unknown' is the honest answer at the instant a house first opens and has not
 %% asked anybody yet. It is not a failure and it is not `never_sailed', which is
-%% the ocean's positive statement that this hull has never been handed to it.
--type standing() :: unknown | moored | consigned | in_passage
-                  | made_landfall | was_lost | never_sailed.
+%% this house's own conclusion that no port has ever held her.
+-type standing() :: unknown | moored | in_passage | was_lost | never_sailed.
 
 -type order() :: #{order      := binary(),
                    kind       := purchase | sale,
@@ -302,7 +309,7 @@ hop_of(Hull) when is_map(Hull) -> maps:get(<<"hop">>, Hull, undefined);
 hop_of(_)                      -> undefined.
 
 %% A sight that does not mention the hull leaves it alone, which is right for a
-%% ship at sea: the ocean reports where she is, not what is stacked in her hold.
+%% ship at sea: a port reports where she is, not what is stacked in her hold.
 %%
 %% It is wrong exactly once. A ship on the bottom has no hold, and whatever she
 %% was carrying went down with her, so a `was_lost' sight that forgot to say so

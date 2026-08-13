@@ -18,39 +18,11 @@ ship_is_an_instance_test() ->
     ?assertEqual({ok, <<"mri:instance:io.macula/tom/ship/santa_clara">>},
                  tom_names:ship(?REALM, <<"santa_clara">>)).
 
-%% There is exactly one ocean, so it carries no name.
-ocean_has_no_name_test() ->
-    ?assertEqual({ok, <<"mri:instance:io.macula/tom/ocean">>},
-                 tom_names:ocean(?REALM)).
-
-%% The place is reference data somebody else owns. This is the running service.
-harbour_is_an_instance_test() ->
-    ?assertEqual({ok, <<"mri:instance:io.macula/tom/harbour/macao">>},
-                 tom_names:harbour(?REALM, <<"macao">>)).
-
-%% A good is a KIND of thing. Forty tons of pepper is not a particular thing.
-good_is_a_class_test() ->
-    ?assertEqual({ok, <<"mri:class:io.macula/tom/good/pepper">>},
-                 tom_names:good(?REALM, <<"pepper">>)).
-
-%% Both ports advertise buy_cargo and macula:call is first-success across the
-%% pool, so the harbour has to be in the procedure name or a Macao order lands
-%% at Lisbon.
-procedure_carries_the_harbour_test() ->
-    {ok, Macao} = tom_names:harbour(?REALM, <<"macao">>),
-    ?assertEqual(<<"io.macula/tom/harbour/macao.buy_cargo">>,
-                 tom_names:procedure(Macao, <<"buy_cargo">>)).
-
-procedure_for_the_ocean_test() ->
-    {ok, Ocean} = tom_names:ocean(?REALM),
-    ?assertEqual(<<"io.macula/tom/ocean.get_voyage">>,
-                 tom_names:procedure(Ocean, <<"get_voyage">>)).
-
-%% No identifier is ever in a topic. That is what lets a house subscribe to
-%% seven topics rather than seven times the number of ports.
-the_seven_topics_test() ->
+%% No identifier is ever in a topic. That is what lets a house subscribe to six
+%% topics rather than six times the number of ports.
+the_six_topics_test() ->
     Facts = tom_names:facts(?REALM),
-    ?assertEqual(7, length(Facts)),
+    ?assertEqual(6, length(Facts)),
     ?assertEqual(<<"io.macula/tom/harbour/trade/cargo_loaded_v1">>,
                  proplists:get_value(cargo_loaded, Facts)),
     ?assertEqual(<<"io.macula/tom/harbour/trade/cargo_discharged_v1">>,
@@ -59,21 +31,18 @@ the_seven_topics_test() ->
                  proplists:get_value(ship_moored, Facts)),
     ?assertEqual(<<"io.macula/tom/harbour/custody/ship_consigned_v1">>,
                  proplists:get_value(ship_consigned, Facts)),
-    ?assertEqual(<<"io.macula/tom/ocean/voyage/ship_sailed_v1">>,
+    ?assertEqual(<<"io.macula/tom/harbour/voyage/ship_sailed_v1">>,
                  proplists:get_value(ship_sailed, Facts)),
-    ?assertEqual(<<"io.macula/tom/ocean/voyage/landfall_made_v1">>,
-                 proplists:get_value(landfall_made, Facts)),
-    ?assertEqual(<<"io.macula/tom/ocean/voyage/ship_lost_v1">>,
+    ?assertEqual(<<"io.macula/tom/harbour/voyage/ship_lost_v1">>,
                  proplists:get_value(ship_lost, Facts)).
 
 reading_a_configuration_test() ->
     {ok, Names} = tom_names:read(config()),
     ?assertEqual(<<"mri:instance:io.macula/tom/house/raf">>, maps:get(house, Names)),
-    ?assertEqual(<<"mri:instance:io.macula/tom/ocean">>, maps:get(ocean, Names)),
     ?assertEqual([{<<"macao">>, <<"mri:instance:io.macula/tom/harbour/macao">>},
                   {<<"lisbon">>, <<"mri:instance:io.macula/tom/harbour/lisbon">>}],
                  maps:get(harbours, Names)),
-    ?assertEqual(7, length(maps:get(facts, Names))).
+    ?assertEqual(6, length(maps:get(facts, Names))).
 
 %% Order is the operator's order, because it is the order the page shows.
 configured_order_is_kept_test() ->
@@ -129,7 +98,7 @@ local_name_of_nonsense_test() ->
 %% A parse, never a lookup. This house has no directory.
 harbour_shape_test() ->
     ?assert(tom_names:is_harbour(<<"mri:instance:io.macula/tom/harbour/lisbon">>)),
-    ?assertNot(tom_names:is_harbour(<<"mri:instance:io.macula/tom/ocean">>)),
+    ?assertNot(tom_names:is_harbour(<<"mri:instance:io.macula/tom/world">>)),
     ?assertNot(tom_names:is_harbour(<<"mri:class:io.macula/tom/harbour/lisbon">>)),
     ?assertNot(tom_names:is_harbour(<<"lisbon">>)),
     ?assertNot(tom_names:is_harbour(undefined)).
