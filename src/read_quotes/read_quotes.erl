@@ -68,9 +68,15 @@ one_port(Harbour, Goods) ->
 
 posted({ok, Reply}, Harbour) ->
     ok = keep_house:note_quotes(Harbour,
-                                #{quotes  => maps:get(<<"quotes">>, Reply, []),
-                                  told_at => maps:get(<<"at">>, Reply, undefined),
-                                  seen_at => erlang:system_time(millisecond)}),
+                                #{quotes   => maps:get(<<"quotes">>, Reply, []),
+                                  %% Where the port is. It never changes, and it
+                                  %% is how a chart can be drawn at all while the
+                                  %% ship is in port, which is most of the time.
+                                  position => maps:get(<<"position">>, Reply,
+                                                       null),
+                                  told_at  => maps:get(<<"at">>, Reply,
+                                                       undefined),
+                                  seen_at  => erlang:system_time(millisecond)}),
     keep_house:note_all_well(read_quotes);
 posted({refused, Why}, Harbour) ->
     keep_house:note_trouble(read_quotes, {Harbour, Why});

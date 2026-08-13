@@ -46,7 +46,7 @@ page(View) ->
 %% @doc Everything that moves. Swapped whole on every change.
 -spec board(map()) -> iodata().
 board(View) ->
-    [voyage(maps:get(sight, View), maps:get(at, View)),
+    [voyage(View),
      topline(View),
      trouble(maps:get(trouble, View, #{})),
      hold(View),
@@ -75,10 +75,28 @@ chart() ->
 
 %% The voyage as the chart needs it, and nothing else: where the line goes, when
 %% she left, when she is due. No duration, as everywhere else.
-voyage(Sight, Now) ->
+voyage(View) ->
+    Sight = maps:get(sight, View),
+    Board = drawn(maps:get(lane, Sight, undefined), Sight, maps:get(at, View)),
     [<<"<script type=\"application/json\" id=\"voyage\">">>,
-     json:encode(drawn(maps:get(lane, Sight, undefined), Sight, Now)),
+     json:encode(Board#{<<"ports">> => ports(View),
+                        <<"at_port">> => at_port(Sight)}),
      <<"</script>">>].
+
+%% EVERY PORT THIS HOUSE TRADES WITH, AND WHERE IT IS. A chart with nothing on
+%% it but a voyage is blank whenever the ship is alongside, which is most of the
+%% time. Each port says where it is when it says what it sells, so this is known
+%% within a few seconds of opening and does not wait for anybody to sail.
+ports(View) ->
+    Quotes = maps:get(quotes, View, #{}),
+    maps:from_list([{Local, maps:get(position, maps:get(MRI, Quotes, #{}), null)}
+                    || {Local, MRI} <- maps:get(harbours, maps:get(names, View))]).
+
+%% Where she is lying, when she is lying anywhere.
+at_port(#{standing := moored, where := Where}) when Where =/= undefined ->
+    tom_names:local(Where);
+at_port(_Sight) ->
+    null.
 
 %% THE ENDS COME OFF THE LANE AND NEVER OFF `where'. She moors, `where' becomes
 %% the port she has arrived at, and the line still begins where she left: read
@@ -648,11 +666,16 @@ script() ->
       "if(!svg||!v)return;"
       "var note=document.getElementById('chart-note');"
       "var p=v.path||[];"
-      "if(p.length<2){svg.innerHTML='';"
-      "note.textContent=v.standing==='moored'?'She is alongside. Cast off to put a line on the water.':'No line to draw yet.';"
-      "return;}"
+      "var ports=[];for(var k in (v.ports||{})){if(v.ports[k])ports.push([k,v.ports[k]]);}"
+      %% A chart with only a voyage on it is blank while she is alongside,
+      %% which is most of the time. The ports carry the window when the line
+      %% does not, and one port alone gets twelve degrees of sea around it.
+      "var frame=p.length>1?p.slice():ports.map(function(q){return q[1];});"
+      "if(frame.length<1){svg.innerHTML='';"
+      "note.textContent='No port has said where it is yet.';return;}"
+      "if(frame.length===1){var f=frame[0];frame=[[f[0]-6,f[1]-6],[f[0]+6,f[1]+6]];}"
       "var W=1000,H=500,M=40;"
-      "var lats=p.map(function(q){return q[0];}),lngs=p.map(function(q){return q[1];});"
+      "var lats=frame.map(function(q){return q[0];}),lngs=frame.map(function(q){return q[1];});"
       "var la0=Math.min.apply(null,lats),la1=Math.max.apply(null,lats);"
       "var lo0=Math.min.apply(null,lngs),lo1=Math.max.apply(null,lngs);"
       "var pad=Math.max((la1-la0),(lo1-lo0))*0.12+2;"
@@ -673,7 +696,7 @@ script() ->
       "var d=ring.map(function(q,i){"
       "return (i?'L':'M')+X(q[0]+off).toFixed(1)+' '+Y(q[1]).toFixed(1);}).join('')+'Z';"
       "out.push('<path class=\"land\" d=\"'+d+'\"/>');});});}"
-      "out.push('<path class=\"lane\" d=\"'+line(p)+'\"/>');\n"
+      "if(p.length>1)out.push('<path class=\"lane\" d=\"'+line(p)+'\"/>');\n"
       %% How far along she is, from two instants and this browser's own
       %% clock. No duration came over the wire and none is derived here.
       "var t=0;"
@@ -694,7 +717,11 @@ script() ->
       "function dot(q,cls,label,dx){"
       "out.push('<circle class=\"'+cls+'\" cx=\"'+X(q[1]).toFixed(1)+'\" cy=\"'+Y(q[0]).toFixed(1)+'\" r=\"4\"/>');"
       "if(label)out.push('<text x=\"'+(X(q[1])+dx).toFixed(1)+'\" y=\"'+(Y(q[0])-8).toFixed(1)+'\" text-anchor=\"'+(dx<0?'end':'start')+'\">'+label+'</text>');}"
-      "dot(p[0],'port',v.from||'',6);dot(p[p.length-1],'port',v.to||'',-6);"
+      "ports.forEach(function(q){dot(q[1],'port',q[0],q[0]===v.to?-6:6);});"
+      "if(p.length>1&&!ports.length){dot(p[0],'port',v.from||'',6);"
+      "dot(p[p.length-1],'port',v.to||'',-6);}"
+      "if(v.at_port&&v.ports&&v.ports[v.at_port])"
+      "out.push('<circle class=\"ship\" cx=\"'+X(v.ports[v.at_port][1]).toFixed(1)+'\" cy=\"'+Y(v.ports[v.at_port][0]).toFixed(1)+'\" r=\"6\"/>');"
       "if(v.standing==='was_lost'){"
       "out.push('<path class=\"wreck\" transform=\"translate('+X(at[1]).toFixed(1)+','+Y(at[0]).toFixed(1)+')\" d=\"M-6-6L6 6M-6 6L6-6\" stroke=\"currentColor\" stroke-width=\"3\"/>');}"
       "else if(v.standing==='in_passage'){"
@@ -702,7 +729,9 @@ script() ->
       "svg.innerHTML=out.join('');"
       "note.textContent=v.standing==='in_passage'"
       "?'Her line, and where she has got to.':"
-      "(v.standing==='was_lost'?'Where she was lost.':'The water she last crossed.');}\n"
+      "(v.standing==='was_lost'?'Where she was lost.':"
+      "(v.at_port?'Alongside at '+v.at_port+'. Cast off to put a line on the "
+      "water.':'The water she last crossed.'));}\n"
       "chartLand().then(drawChart).catch(drawChart);"
       "setInterval(function(){var v=voyage();if(v&&v.standing==='in_passage')drawChart();},1000);\n"
       "document.querySelectorAll('form.act').forEach(function(f){"

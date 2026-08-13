@@ -203,6 +203,15 @@ nothing_off_the_mesh_can_break_out_of_the_voyage_test() ->
     Board = flat(show_house_page:board((moored_view())#{sight => Sight})),
     ?assertNot(contains(Board, <<"<script>alert">>)).
 
+%% THE CHART IS NOT BLANK WHILE SHE IS IN PORT, which is most of the time. Each
+%% port says where it is when it says what it sells, so the board can draw the
+%% map before anybody has sailed anywhere.
+the_board_carries_the_ports_before_anyone_sails_test() ->
+    Board = flat(show_house_page:board(moored_view())),
+    ?assert(contains(Board, <<"\"macao\":[22.2,113.55]">>)),
+    ?assert(contains(Board, <<"\"at_port\":\"macao\"">>)),
+    ?assert(contains(Board, <<"\"path\":[]">>)).
+
 %%% Numbers a person reads
 
 money_is_always_two_places_test() ->
@@ -353,9 +362,11 @@ moored_view() ->
       quotes    => #{?MACAO => #{quotes => [#{<<"good">> => ?PEPPER,
                                               <<"price">> => 12.915496650148841,
                                               <<"stock">> => 43.918}],
+                                 position => [22.2, 113.55],
                                  told_at => 1786528800000,
                                  seen_at => 1786528797000},
-                     ?LISBON => #{quotes => [], told_at => undefined,
+                     ?LISBON => #{quotes => [], position => [38.71, -9.14],
+                                  told_at => undefined,
                                   seen_at => 1786528797000}},
       cash_book => book(),
       news      => [#{fact => you_bought, at => 1786528800000,
