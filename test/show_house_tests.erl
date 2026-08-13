@@ -183,11 +183,23 @@ the_board_carries_her_line_test() ->
      || Never <- [<<"\"duration\"">>, <<"\"passage_ms\"">>, <<"\"leagues\"">>,
                   <<"\"speed\"">>]].
 
+%% SHE MOORS AND THE LINE STAYS PUT. `where' becomes the port she has arrived
+%% at while the line still begins where she left, so a label read off `where'
+%% lands on the wrong dot: Lisbon drawn on Macao, in China. The lane carries its
+%% own two ends and cannot be labelled with where she is now.
+a_kept_line_keeps_its_own_ends_test() ->
+    Moored = (at_sea())#{standing => moored, where => ?LISBON,
+                         bound_for => undefined},
+    Board = flat(show_house_page:board((moored_view())#{sight => Moored})),
+    ?assert(contains(Board, <<"\"from\":\"macao\"">>)),
+    ?assert(contains(Board, <<"\"to\":\"lisbon\"">>)).
+
 %% A payload off the mesh reaches the chart as JSON, so a harbour that put a
 %% closing script tag in a name must not be able to close ours.
 nothing_off_the_mesh_can_break_out_of_the_voyage_test() ->
-    Sight = (at_sea())#{bound_for => <<"mri:instance:io.macula/tom/harbour/",
-                                       "</script><script>alert(1)</script>">>},
+    Lane = maps:get(lane, at_sea()),
+    Sight = (at_sea())#{lane => Lane#{to => <<"mri:instance:io.macula/tom/harbour/",
+                                              "</script><script>alert(1)</script>">>}},
     Board = flat(show_house_page:board((moored_view())#{sight => Sight})),
     ?assertNot(contains(Board, <<"<script>alert">>)).
 
@@ -333,7 +345,8 @@ moored_view() ->
       free_hold => 160.0,
       sight     => #{standing => moored, where => ?MACAO, bound_for => undefined,
                      sailed_at => undefined, due_at => undefined, cause => undefined,
-                     sighted_at => 1786528800000, ship => ?SHIP, path => []},
+                     sighted_at => 1786528800000, ship => ?SHIP,
+                     lane => undefined},
       orders    => [#{order => <<"5f2c1a">>, kind => purchase, harbour => ?MACAO,
                       good => ?PEPPER, quantity => 40.0, at => 1786528800000,
                       state => settled, coin => 581.42, moved => 40.0}],
@@ -381,7 +394,8 @@ at_sea() ->
     #{standing => in_passage, where => ?MACAO, bound_for => ?LISBON,
       sailed_at => 1786528800000, due_at => 1786528890000, cause => undefined,
       sighted_at => 1786528800000, ship => ?SHIP,
-      path => [[22.2, 113.55], [15.5, 73.91]]}.
+      lane => #{from => ?MACAO, to => ?LISBON,
+                path => [[22.2, 113.55], [15.5, 73.91]]}}.
 
 standing_view(Standing) ->
     View = moored_view(),

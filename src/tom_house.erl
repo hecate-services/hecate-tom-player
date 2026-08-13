@@ -23,7 +23,16 @@
 -export([purse/1, opened/1, hull/1, cargo/1, hold/1, free_hold/1]).
 -export([sight/1, orders/1, unsettled/1, order/2, moved/1, cash_book/1]).
 
--export_type([house/0, fact/0, order/0, standing/0, book/0, entry/0]).
+-export_type([house/0, fact/0, order/0, standing/0, book/0, entry/0, lane/0]).
+
+%% @doc The water she is on, and the two ports it runs between.
+%%
+%% ONE THING AND NOT THREE. The line and its ends were three fields once and they
+%% drifted apart the moment she moored: `where' became the port she had arrived
+%% at while the line still began where she had left, so the far port's name was
+%% drawn on the near port's dot and Lisbon appeared in China. A line has ends.
+%% They travel together or they lie.
+-type lane() :: #{from := binary(), to := binary(), path := [[number()]]}.
 
 %% Where the hull is, as far as this house has been told.
 %%
@@ -77,7 +86,7 @@
                    sailed_at   := integer() | undefined,
                    due_at      := integer() | undefined,
                    cause       := binary() | undefined,
-                   path        := [[number()]],
+                   lane        := lane() | undefined,
                    sighted_at  := integer() | undefined,
                    orders      := #{binary() => order()}}.
 
@@ -97,7 +106,7 @@ empty() ->
       sailed_at   => undefined,
       due_at      => undefined,
       cause       => undefined,
-      path        => [],
+      lane        => undefined,
       sighted_at  => undefined,
       orders      => #{}}.
 
@@ -175,9 +184,9 @@ free_hold(House) ->
 %% it because a picture without an age invites a player to believe it.
 -spec sight(house()) -> map().
 sight(#{standing := S, where := W, bound_for := B, sailed_at := SA,
-        due_at := D, cause := C, sighted_at := At, ship := Ship, path := P}) ->
+        due_at := D, cause := C, sighted_at := At, ship := Ship, lane := L}) ->
     #{standing => S, where => W, bound_for => B, sailed_at => SA,
-      due_at => D, cause => C, sighted_at => At, ship => Ship, path => P}.
+      due_at => D, cause => C, sighted_at => At, ship => Ship, lane => L}.
 
 %% @doc Every order this house has ever placed, newest first.
 -spec orders(house()) -> [order()].
@@ -334,8 +343,10 @@ sighted(true, F, H) ->
        sailed_at  => maps:get(sailed_at, F, undefined),
        due_at     => maps:get(due_at, F, undefined),
        cause      => maps:get(cause, F, undefined),
-       %% THE LINE IS KEPT, not refetched. A sight that does not mention one
+       %% THE LANE IS KEPT, not refetched. A sight that does not mention one
        %% leaves it alone: she is on the same water she was a second ago, and a
-       %% mooring has no line at all.
-       path       => maps:get(path, F, maps:get(path, H, [])),
+       %% mooring is still worth showing the crossing she has just made. It
+       %% carries its own two ports, so a kept lane cannot be labelled with where
+       %% she is now.
+       lane       => maps:get(lane, F, maps:get(lane, H, undefined)),
        sighted_at => maps:get(at, F)}.

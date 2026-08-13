@@ -77,20 +77,29 @@ chart() ->
 %% she left, when she is due. No duration, as everywhere else.
 voyage(Sight, Now) ->
     [<<"<script type=\"application/json\" id=\"voyage\">">>,
-     json:encode(#{<<"standing">> => atom_to_binary(maps:get(standing, Sight), utf8),
-                   <<"path">> => maps:get(path, Sight, []),
-                   <<"sailed_at">> => nullable(maps:get(sailed_at, Sight)),
-                   <<"due_at">> => nullable(maps:get(due_at, Sight)),
-                   <<"from">> => shortened(maps:get(where, Sight)),
-                   <<"to">> => shortened(maps:get(bound_for, Sight)),
-                   <<"at">> => Now}),
+     json:encode(drawn(maps:get(lane, Sight, undefined), Sight, Now)),
      <<"</script>">>].
+
+%% THE ENDS COME OFF THE LANE AND NEVER OFF `where'. She moors, `where' becomes
+%% the port she has arrived at, and the line still begins where she left: read
+%% the label from one and the position from the other and the far port's name
+%% lands on the near port's dot. Lisbon appeared in China for an afternoon.
+drawn(undefined, Sight, Now) ->
+    #{<<"standing">> => atom_to_binary(maps:get(standing, Sight), utf8),
+      <<"path">> => [], <<"from">> => null, <<"to">> => null,
+      <<"sailed_at">> => null, <<"due_at">> => null, <<"at">> => Now};
+drawn(#{from := From, to := To, path := Path}, Sight, Now) ->
+    #{<<"standing">> => atom_to_binary(maps:get(standing, Sight), utf8),
+      <<"path">> => Path,
+      <<"from">> => tom_names:local(From),
+      <<"to">> => tom_names:local(To),
+      <<"sailed_at">> => nullable(maps:get(sailed_at, Sight)),
+      <<"due_at">> => nullable(maps:get(due_at, Sight)),
+      <<"at">> => Now}.
 
 nullable(undefined) -> null;
 nullable(Value)     -> Value.
 
-shortened(undefined) -> null;
-shortened(MRI)       -> tom_names:local(MRI).
 
 masthead(Names) ->
     [<<"<header><h1>">>, esc(tom_names:local(maps:get(ship, Names))), <<"</h1>">>,

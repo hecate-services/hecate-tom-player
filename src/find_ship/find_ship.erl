@@ -164,7 +164,8 @@ alongside({Harbour, in_passage, Hull, Reply}) ->
       bound_for => maps:get(<<"bound_for">>, Reply, undefined),
       sailed_at => maps:get(<<"sailed_at">>, Reply, undefined),
       due_at    => maps:get(<<"due_at">>, Reply, undefined),
-      path      => maps:get(<<"path">>, Reply, []),
+      lane      => lane(Harbour, maps:get(<<"bound_for">>, Reply, undefined),
+                        maps:get(<<"path">>, Reply, [])),
       at        => erlang:system_time(millisecond)};
 alongside({Harbour, moored, Hull, _Reply}) ->
     #{standing  => moored,
@@ -172,6 +173,13 @@ alongside({Harbour, moored, Hull, _Reply}) ->
       hull      => Hull,
       bound_for => undefined,
       at        => erlang:system_time(millisecond)}.
+
+%% A LINE CARRIES ITS OWN TWO ENDS. Anything else and a page draws the far port's
+%% name on the near port's dot the moment she arrives somewhere, because `where'
+%% has moved on and the line has not.
+lane(_From, undefined, _Path) -> undefined;
+lane(_From, _To, [])          -> undefined;
+lane(From, To, Path)          -> #{from => From, to => To, path => Path}.
 
 %% Nobody is holding her, and what that means depends entirely on who spoke.
 nobody_holds_her(Replies, Last) ->
