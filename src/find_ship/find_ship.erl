@@ -164,6 +164,7 @@ alongside({Harbour, in_passage, Hull, Reply}) ->
       bound_for => maps:get(<<"bound_for">>, Reply, undefined),
       sailed_at => maps:get(<<"sailed_at">>, Reply, undefined),
       due_at    => maps:get(<<"due_at">>, Reply, undefined),
+      path      => maps:get(<<"path">>, Reply, []),
       at        => erlang:system_time(millisecond)};
 alongside({Harbour, moored, Hull, _Reply}) ->
     #{standing  => moored,

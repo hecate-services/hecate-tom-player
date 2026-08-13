@@ -77,6 +77,7 @@
                    sailed_at   := integer() | undefined,
                    due_at      := integer() | undefined,
                    cause       := binary() | undefined,
+                   path        := [[number()]],
                    sighted_at  := integer() | undefined,
                    orders      := #{binary() => order()}}.
 
@@ -96,6 +97,7 @@ empty() ->
       sailed_at   => undefined,
       due_at      => undefined,
       cause       => undefined,
+      path        => [],
       sighted_at  => undefined,
       orders      => #{}}.
 
@@ -173,9 +175,9 @@ free_hold(House) ->
 %% it because a picture without an age invites a player to believe it.
 -spec sight(house()) -> map().
 sight(#{standing := S, where := W, bound_for := B, sailed_at := SA,
-        due_at := D, cause := C, sighted_at := At, ship := Ship}) ->
+        due_at := D, cause := C, sighted_at := At, ship := Ship, path := P}) ->
     #{standing => S, where => W, bound_for => B, sailed_at => SA,
-      due_at => D, cause => C, sighted_at => At, ship => Ship}.
+      due_at => D, cause => C, sighted_at => At, ship => Ship, path => P}.
 
 %% @doc Every order this house has ever placed, newest first.
 -spec orders(house()) -> [order()].
@@ -332,4 +334,8 @@ sighted(true, F, H) ->
        sailed_at  => maps:get(sailed_at, F, undefined),
        due_at     => maps:get(due_at, F, undefined),
        cause      => maps:get(cause, F, undefined),
+       %% THE LINE IS KEPT, not refetched. A sight that does not mention one
+       %% leaves it alone: she is on the same water she was a second ago, and a
+       %% mooring has no line at all.
+       path       => maps:get(path, F, maps:get(path, H, [])),
        sighted_at => maps:get(at, F)}.

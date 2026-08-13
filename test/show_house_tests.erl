@@ -154,6 +154,43 @@ a_view_without_a_book_still_renders_test() ->
     ?assertNot(contains(Board, <<"The cash book">>)),
     ?assert(contains(Board, <<"The market">>)).
 
+%%% The chart
+
+the_page_carries_a_chart_test() ->
+    Page = flat(show_house_page:page(moored_view())),
+    ?assert(contains(Page, <<"id=\"chart\"">>)),
+    ?assert(contains(Page, <<"/coastline">>)).
+
+%% THE CHART IS OUTSIDE THE SWAPPED FRAGMENT, like the helm. A board arriving
+%% every few seconds must not tear the picture out from under somebody looking
+%% at it, so what the board carries is the voyage as data and the chart reads it.
+the_board_does_not_carry_the_chart_test() ->
+    Board = flat(show_house_page:board(moored_view())),
+    ?assertNot(contains(Board, <<"<svg">>)),
+    ?assert(contains(Board, <<"id=\"voyage\"">>)).
+
+%% The line she is on reaches the browser as data, with the two INSTANTS that
+%% let it work out how far along she is. How long a crossing takes is the sea's
+%% and is not among the fields, so the chart derives a fraction from two of the
+%% port's own timestamps and never learns the constant behind them.
+the_board_carries_her_line_test() ->
+    View = (moored_view())#{sight => at_sea()},
+    Board = flat(show_house_page:board(View)),
+    ?assert(contains(Board, <<"\"path\":[[22.2,113.55],[15.5,73.91]]">>)),
+    ?assert(contains(Board, <<"\"sailed_at\":1786528800000">>)),
+    ?assert(contains(Board, <<"\"due_at\":1786528890000">>)),
+    [?assertNot(contains(Board, Never))
+     || Never <- [<<"\"duration\"">>, <<"\"passage_ms\"">>, <<"\"leagues\"">>,
+                  <<"\"speed\"">>]].
+
+%% A payload off the mesh reaches the chart as JSON, so a harbour that put a
+%% closing script tag in a name must not be able to close ours.
+nothing_off_the_mesh_can_break_out_of_the_voyage_test() ->
+    Sight = (at_sea())#{bound_for => <<"mri:instance:io.macula/tom/harbour/",
+                                       "</script><script>alert(1)</script>">>},
+    Board = flat(show_house_page:board((moored_view())#{sight => Sight})),
+    ?assertNot(contains(Board, <<"<script>alert">>)).
+
 %%% Numbers a person reads
 
 money_is_always_two_places_test() ->
@@ -296,7 +333,7 @@ moored_view() ->
       free_hold => 160.0,
       sight     => #{standing => moored, where => ?MACAO, bound_for => undefined,
                      sailed_at => undefined, due_at => undefined, cause => undefined,
-                     sighted_at => 1786528800000, ship => ?SHIP},
+                     sighted_at => 1786528800000, ship => ?SHIP, path => []},
       orders    => [#{order => <<"5f2c1a">>, kind => purchase, harbour => ?MACAO,
                       good => ?PEPPER, quantity => 40.0, at => 1786528800000,
                       state => settled, coin => 581.42, moved => 40.0}],
@@ -339,6 +376,12 @@ long_book() ->
     Facts = [{house_opened_v1, #{purse => 10000.0, ship => ?SHIP, at => 1}}
              | lists:append(Trades)],
     tom_house:cash_book(tom_house:replay(Facts, tom_house:empty())).
+
+at_sea() ->
+    #{standing => in_passage, where => ?MACAO, bound_for => ?LISBON,
+      sailed_at => 1786528800000, due_at => 1786528890000, cause => undefined,
+      sighted_at => 1786528800000, ship => ?SHIP,
+      path => [[22.2, 113.55], [15.5, 73.91]]}.
 
 standing_view(Standing) ->
     View = moored_view(),

@@ -38,6 +38,7 @@ page(View) ->
      <<"<style>">>, css(), <<"</style></head><body>">>,
      <<"<main>">>,
      masthead(Names),
+     chart(),
      <<"<div id=\"board\">">>, board(View), <<"</div>">>,
      helm(Names),
      <<"</main><script>">>, script(), <<"</script></body></html>">>].
@@ -45,7 +46,8 @@ page(View) ->
 %% @doc Everything that moves. Swapped whole on every change.
 -spec board(map()) -> iodata().
 board(View) ->
-    [topline(View),
+    [voyage(maps:get(sight, View), maps:get(at, View)),
+     topline(View),
      trouble(maps:get(trouble, View, #{})),
      hold(View),
      market(View),
@@ -54,6 +56,41 @@ board(View) ->
      news(maps:get(news, View, []))].
 
 %%% Sections
+
+%% THE CHART IS OUTSIDE THE SWAPPED FRAGMENT, for the same reason the helm is: a
+%% board arriving every few seconds must not tear the picture out from under
+%% somebody looking at it. What the board carries instead is the VOYAGE, as data
+%% in a script tag, and the chart reads it after each swap and redraws.
+%%
+%% A script tag rather than a data attribute because a path is a hundred pairs of
+%% numbers and that is not an attribute. It is never executed: the type is not
+%% JavaScript, so a browser hands it over as text and nothing in it can run,
+%% which matters because the line came off the mesh.
+chart() ->
+    <<"<section class=\"panel chart\"><h2>The chart</h2>"
+      "<svg id=\"chart\" viewBox=\"0 0 1000 500\" "
+      "preserveAspectRatio=\"xMidYMid meet\" role=\"img\" "
+      "aria-label=\"Where the ship is\"></svg>"
+      "<p class=\"sub\" id=\"chart-note\">&nbsp;</p></section>">>.
+
+%% The voyage as the chart needs it, and nothing else: where the line goes, when
+%% she left, when she is due. No duration, as everywhere else.
+voyage(Sight, Now) ->
+    [<<"<script type=\"application/json\" id=\"voyage\">">>,
+     json:encode(#{<<"standing">> => atom_to_binary(maps:get(standing, Sight), utf8),
+                   <<"path">> => maps:get(path, Sight, []),
+                   <<"sailed_at">> => nullable(maps:get(sailed_at, Sight)),
+                   <<"due_at">> => nullable(maps:get(due_at, Sight)),
+                   <<"from">> => shortened(maps:get(where, Sight)),
+                   <<"to">> => shortened(maps:get(bound_for, Sight)),
+                   <<"at">> => Now}),
+     <<"</script>">>].
+
+nullable(undefined) -> null;
+nullable(Value)     -> Value.
+
+shortened(undefined) -> null;
+shortened(MRI)       -> tom_names:local(MRI).
 
 masthead(Names) ->
     [<<"<header><h1>">>, esc(tom_names:local(maps:get(ship, Names))), <<"</h1>">>,
@@ -498,10 +535,12 @@ escaped(C)  -> <<C>>.
 css() ->
     <<"*{box-sizing:border-box}"
       ":root{--ink:#1b1a17;--dim:#6b6558;--paper:#f6f1e6;--card:#fffdf7;"
-      "--line:#ddd3bd;--go:#1f5c3a;--bad:#8c2f18;--warn:#7a5c12}"
+      "--line:#ddd3bd;--go:#1f5c3a;--bad:#8c2f18;--warn:#7a5c12;"
+      "--sea:#dce6ea;--land:#efe7d4;--coast:#c3b79b}"
       "@media(prefers-color-scheme:dark){:root{--ink:#ece5d6;--dim:#9a9384;"
       "--paper:#16150f;--card:#1f1d16;--line:#3a362a;--go:#2f7d52;"
-      "--bad:#e2765a;--warn:#d8b34a}}"
+      "--bad:#e2765a;--warn:#d8b34a;"
+      "--sea:#101821;--land:#241f16;--coast:#3d3628}}"
       "body{margin:0;background:var(--paper);color:var(--ink);"
       "font:16px/1.5 ui-serif,Georgia,'Times New Roman',serif}"
       "main{max-width:66rem;margin:0 auto;padding:1.5rem 1rem 4rem}"
@@ -537,6 +576,19 @@ css() ->
       ".o-refused td{color:var(--bad)}"
       ".o-ordered td{color:var(--warn)}"
       ".o-opening td{color:var(--dim);font-style:italic}"
+      ".chart{padding:0;overflow:hidden}"
+      ".chart h2{padding:.9rem 1rem 0}"
+      "#chart{display:block;width:100%;height:auto;background:var(--sea)}"
+      "#chart .land{fill:var(--land);stroke:var(--coast);stroke-width:.5}"
+      "#chart .lane{fill:none;stroke:var(--ink);stroke-width:2;"
+      "stroke-dasharray:5 4;opacity:.5}"
+      "#chart .sailed{fill:none;stroke:var(--go);stroke-width:2.5;opacity:.9}"
+      "#chart .port{fill:var(--ink)}"
+      "#chart .ship{fill:var(--go);stroke:var(--paper);stroke-width:1.5}"
+      "#chart .wreck{fill:var(--bad)}"
+      "#chart text{font:600 13px ui-sans-serif,system-ui,sans-serif;"
+      "fill:var(--ink)}"
+      "#chart-note{padding:0 1rem .9rem;margin:.4rem 0 0}"
       ".helm{position:sticky;bottom:0;background:var(--card);"
       "border:1px solid var(--line);border-radius:.4rem;padding:.9rem 1rem;"
       "box-shadow:0 -.4rem 1.2rem rgba(0,0,0,.08)}"
@@ -566,7 +618,84 @@ script() ->
       "var src=new EventSource('/stream');\n"
       "src.addEventListener('board',function(e){"
       "document.getElementById('board').innerHTML=JSON.parse(e.data);"
-      "t0=Date.now();ticks();});\n"
+      "t0=Date.now();ticks();drawChart();});\n"
+      "\n"
+      "/* THE CHART. Equirectangular, which is what a period chart is: a\n"
+      " * rectangle of latitude against longitude. It is wrong about area at the\n"
+      " * poles and this trade never goes there.\n"
+      " *\n"
+      " * The window is the voyage, not the world. It frames the line she is on\n"
+      " * with a margin, so a hop through the Formosa Strait fills the panel just\n"
+      " * as the galleon does, and the land is drawn three times, at minus, plus\n"
+      " * and no offset of a full turn, because the galleon's longitude runs past\n"
+      " * 180 and the coastline does not. The viewBox throws away what misses. */\n"
+      "var COAST=null;\n"
+      "function chartLand(){return fetch('/coastline').then(function(r){"
+      "return r.json();}).then(function(c){COAST=c;});}\n"
+      "function voyage(){var el=document.getElementById('voyage');"
+      "try{return el?JSON.parse(el.textContent):null;}catch(e){return null;}}\n"
+      "function drawChart(){"
+      "var svg=document.getElementById('chart'),v=voyage();"
+      "if(!svg||!v)return;"
+      "var note=document.getElementById('chart-note');"
+      "var p=v.path||[];"
+      "if(p.length<2){svg.innerHTML='';"
+      "note.textContent=v.standing==='moored'?'She is alongside. Cast off to put a line on the water.':'No line to draw yet.';"
+      "return;}"
+      "var W=1000,H=500,M=40;"
+      "var lats=p.map(function(q){return q[0];}),lngs=p.map(function(q){return q[1];});"
+      "var la0=Math.min.apply(null,lats),la1=Math.max.apply(null,lats);"
+      "var lo0=Math.min.apply(null,lngs),lo1=Math.max.apply(null,lngs);"
+      "var pad=Math.max((la1-la0),(lo1-lo0))*0.12+2;"
+      "la0-=pad;la1+=pad;lo0-=pad;lo1+=pad;"
+      %% Degrees of longitude are shorter away from the equator, so the
+      %% window is squeezed by the cosine of its own middle latitude or
+      %% the Cape comes out stretched.
+      "var mid=(la0+la1)/2,k=Math.cos(mid*Math.PI/180)||1;"
+      "var spanX=(lo1-lo0)*k,spanY=(la1-la0);"
+      "var s=Math.min((W-2*M)/spanX,(H-2*M)/spanY);"
+      "var cx=(lo0+lo1)/2,cy=(la0+la1)/2;"
+      "function X(lng){return W/2+(lng-cx)*k*s;}"
+      "function Y(lat){return H/2-(lat-cy)*s;}"
+      "function line(pts){return pts.map(function(q,i){"
+      "return (i?'L':'M')+X(q[1]).toFixed(1)+' '+Y(q[0]).toFixed(1);}).join('');}\n"
+      "var out=[];"
+      "if(COAST){[-360,0,360].forEach(function(off){COAST.forEach(function(ring){"
+      "var d=ring.map(function(q,i){"
+      "return (i?'L':'M')+X(q[0]+off).toFixed(1)+' '+Y(q[1]).toFixed(1);}).join('')+'Z';"
+      "out.push('<path class=\"land\" d=\"'+d+'\"/>');});});}"
+      "out.push('<path class=\"lane\" d=\"'+line(p)+'\"/>');\n"
+      %% How far along she is, from two instants and this browser's own
+      %% clock. No duration came over the wire and none is derived here.
+      "var t=0;"
+      "if(v.sailed_at&&v.due_at&&v.due_at>v.sailed_at){"
+      "t=(Date.now()-v.sailed_at)/(v.due_at-v.sailed_at);"
+      "t=Math.max(0,Math.min(1,t));}"
+      "if(v.standing!=='in_passage')t=(v.standing==='moored')?1:t;"
+      "var seg=[],walked=0,total=0,d2=[];"
+      "for(var i=1;i<p.length;i++){var dx=(p[i][1]-p[i-1][1])*k,dy=p[i][0]-p[i-1][0];"
+      "var L=Math.hypot(dx,dy);d2.push(L);total+=L;}"
+      "var want=total*t,at=p[0];"
+      "for(var j=0;j<d2.length;j++){"
+      "if(walked+d2[j]>=want){var f=d2[j]?(want-walked)/d2[j]:0;"
+      "at=[p[j][0]+(p[j+1][0]-p[j][0])*f,p[j][1]+(p[j+1][1]-p[j][1])*f];"
+      "seg=p.slice(0,j+1).concat([at]);break;}"
+      "walked+=d2[j];seg=p.slice(0,j+2);at=p[j+1];}"
+      "if(seg.length>1)out.push('<path class=\"sailed\" d=\"'+line(seg)+'\"/>');\n"
+      "function dot(q,cls,label,dx){"
+      "out.push('<circle class=\"'+cls+'\" cx=\"'+X(q[1]).toFixed(1)+'\" cy=\"'+Y(q[0]).toFixed(1)+'\" r=\"4\"/>');"
+      "if(label)out.push('<text x=\"'+(X(q[1])+dx).toFixed(1)+'\" y=\"'+(Y(q[0])-8).toFixed(1)+'\" text-anchor=\"'+(dx<0?'end':'start')+'\">'+label+'</text>');}"
+      "dot(p[0],'port',v.from||'',6);dot(p[p.length-1],'port',v.to||'',-6);"
+      "if(v.standing==='was_lost'){"
+      "out.push('<path class=\"wreck\" transform=\"translate('+X(at[1]).toFixed(1)+','+Y(at[0]).toFixed(1)+')\" d=\"M-6-6L6 6M-6 6L6-6\" stroke=\"currentColor\" stroke-width=\"3\"/>');}"
+      "else if(v.standing==='in_passage'){"
+      "out.push('<circle class=\"ship\" cx=\"'+X(at[1]).toFixed(1)+'\" cy=\"'+Y(at[0]).toFixed(1)+'\" r=\"6\"/>');}"
+      "svg.innerHTML=out.join('');"
+      "note.textContent=v.standing==='in_passage'"
+      "?'Her line, and where she has got to.':"
+      "(v.standing==='was_lost'?'Where she was lost.':'The water she last crossed.');}\n"
+      "chartLand().then(drawChart).catch(drawChart);"
+      "setInterval(function(){var v=voyage();if(v&&v.standing==='in_passage')drawChart();},1000);\n"
       "document.querySelectorAll('form.act').forEach(function(f){"
       "f.addEventListener('submit',function(ev){ev.preventDefault();"
       "var body=new URLSearchParams(new FormData(f));"

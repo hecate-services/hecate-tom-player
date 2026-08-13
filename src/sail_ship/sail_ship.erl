@@ -60,6 +60,7 @@ sailed({ok, Reply}, Harbour, BoundFor) ->
                             bound_for => BoundFor,
                             sailed_at => maps:get(<<"at">>, Reply, undefined),
                             due_at    => maps:get(<<"due_at">>, Reply, undefined),
+                            path      => maps:get(<<"path">>, Reply, []),
                             at        => erlang:system_time(millisecond)}),
     ok = keep_house:note_news(you_sailed, #{from      => Harbour,
                                             bound_for => BoundFor}),
